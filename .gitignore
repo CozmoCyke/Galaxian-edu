@@ -31,3 +31,7 @@ Desktop.ini
 
 # Temp
 .screenshot.png
+
+# Private bundles (full local history backup)
+*.bundle
+*.bundle.manifest.txt

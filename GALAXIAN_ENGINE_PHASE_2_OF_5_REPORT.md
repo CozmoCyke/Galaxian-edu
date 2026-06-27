@@ -97,3 +97,46 @@ start http://localhost:8000        # (run_local.ps1 first)
 git tag -l "phase-*"
 # → phase-0.1-complete  (979ec56 on origin/main)
 ```
+
+## Private Git Bundle — Full Local History Backup
+
+### Status
+```
+PRIVATE GIT BUNDLE VERIFIED — FULL LOCAL HISTORY RECOVERABLE
+```
+
+### Bundle file
+- **Path**: `C:\dev\git-bundles\galaxian-edu\galaxian-edu-full-20260627-170350.bundle`
+- **Size**: 1,362,207 bytes (1.30 MB)
+- **SHA-256**: `738D41CCB583B1E5D945192AC1A2AD2AD9A43602C765C37AD9FE965516B7A6A4`
+- **Manifest**: `C:\dev\git-bundles\galaxian-edu\galaxian-edu-full-20260627-170350.bundle.manifest.txt`
+- **Backup dir**: `C:\dev\git-bundles\galaxian-edu\` (outside repo)
+
+### Contents
+| Ref | Included |
+|-----|----------|
+| `refs/heads/main` | ✅ `caffa3a` |
+| `refs/heads/master` | ✅ `9edeb8e` |
+| `refs/remotes/origin/main` | ✅ `caffa3a` |
+| `refs/tags/phase-0.1-complete` | ✅ `233854f` (annotated tag → `caffa3a`) |
+| Commits | 6 total (3 main + 4 master, with overlap at `caffa3a`/`979ec56`) |
+
+### Verification results
+- **`git bundle list-heads`**: all refs present and correct
+- **`git clone` from bundle**: SUCCESS — 6 commits, 2 branches, 1 tag all restored
+- **`git fsck --full`**: 0 errors, no corruption
+- **`master` checkout**: all 4 commits + provenance-uncertain files (`galaxian_basic/`, `project/`, `galaxian.asm`, `app/`, `org/`) fully accessible
+
+### Privacy
+- Bundle stored **outside** the repo (`C:\dev\git-bundles\galaxian-edu\`) — not tracked, not pushed
+- `*.bundle` and `*.bundle.manifest.txt` added to `.gitignore` (committed on `main`)
+- Restore test clone deleted after verification
+- Bundle is **private archival backup only** — do not publish or share
+
+### Restore instructions (if needed)
+```powershell
+git clone C:\dev\git-bundles\galaxian-edu\galaxian-edu-full-20260627-170350.bundle C:\dev\galaxian-edu-restored
+cd C:\dev\galaxian-edu-restored
+git checkout master   # full history with all assets
+git checkout main     # clean public subset
+```
