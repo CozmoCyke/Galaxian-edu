@@ -33,15 +33,38 @@ This document maps each concept from the original Galaxian Z80 disassembly
 
 | ASM Concept | Address/Symbol | JS Equivalent | Status |
 |---|---|---|---|
-| Master attack counter | `$424A` | `attackCounters.master` | 🔲 Future |
-| Secondary attack counters | `$424B–$425A` | `attackCounters.secondary[16]` | 🔲 Future |
-| Flagship master counters | `$4245–$4246` | `attackCounters.flagshipMaster[2]` | 🔲 Future |
-| `ALIENS_ATTACK_FROM_RIGHT_FLANK` | `$4215` | `attackCounters.flank` | 🔲 Future |
-| `CAN_ALIEN_ATTACK` | `$4228` | computed from counters | 🔲 Future |
-| `CAN_FLAGSHIP_OR_RED_ALIENS_ATTACK` | `$4229` | computed from counters | 🔲 Future |
-| `FLAGSHIP_ESCORT_COUNT` | `$422A` | `FLAGSHIP_ESCORT_COUNT` | 🔲 Future |
-| `IS_FLAGSHIP_HIT` | `$422B` | `isFlagshipHit` | 🔲 Future |
-| `ALIENS_IN_SHOCK_COUNTER` | `$422C` | `shockCounter` | 🔲 Future |
+| Master attack counter | `$424A` | `AlienAttackCounters.master` | ✅ Implemented |
+| Secondary attack counters | `$424B–$425A` | `AlienAttackCounters.counters[1..15]` | ✅ Implemented |
+| `ALIENS_ATTACK_FROM_RIGHT_FLANK` | `$4215` | `OrdinaryAttackScheduler._side` | ✅ Implemented |
+| `CAN_ALIEN_ATTACK` | `$4228` | `AlienAttackCounters._canAttack` | ✅ Implemented |
+
+## Flagship Attack Scheduler (Phase 4)
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `UPDATE_ATTACK_COUNTERS` | `$1555` | `FlagshipAttackCounters.updateAttackCounters()` | ✅ Implemented |
+| `CHECK_IF_FLAGSHIP_CAN_ATTACK` | `$15C3` | `FlagshipAttackCounters.checkCanAttack()` | ✅ Implemented |
+| `HANDLE_FLAGSHIP_ATTACK` | `$140C` | `FlagshipAttackScheduler.update()` | ✅ Implemented |
+| `HANDLE_SHOCKED_SWARM` | `$1688` | `ShockController.update()` | ✅ Implemented |
+| Flagship scoring routine | `$127C` | `FlagshipScoreCalculator.calculate()` | ✅ Implemented |
+| Escort counting | `$0D58` | `EscortSelector.selectEscorts()` | ✅ Implemented |
+| `FLAGSHIP_ATTACK_MASTER_COUNTER_1` | `$4245` (default $40=64) | `FlagshipAttackCounters.master1` | ✅ Implemented |
+| `FLAGSHIP_ATTACK_MASTER_COUNTER_2` | `$4246` (default $06=6) | `FlagshipAttackCounters.master2` | ✅ Implemented |
+| `ENABLE_FLAGSHIP_ATTACK_SECONDARY_COUNTER` | `$422E` | `FlagshipAttackCounters.secondaryEnabled` | ✅ Implemented |
+| `FLAGSHIP_ATTACK_SECONDARY_COUNTER` | `$422F` | `FlagshipAttackCounters.secondary` | ✅ Implemented |
+| `CAN_FLAGSHIP_OR_RED_ALIENS_ATTACK` | `$4229` | `FlagshipAttackCounters.canAttack` | ✅ Implemented |
+| `FLAGSHIP_ESCORT_COUNT` | `$422A` (0–2) | `FlagshipAttackGroup.livingEscortCount` | ✅ Implemented |
+| `IS_FLAGSHIP_HIT` | `$422B` | `ShockController.isActive` | ✅ Implemented |
+| `ALIENS_IN_SHOCK_COUNTER` | `$422C` (default $F0=240) | `ShockController.counter` | ✅ Implemented |
+| `FLAGSHIP_SCORE_FACTOR` | `$422D` | `FlagshipScoreCalculator.calculate().factor` | ✅ Implemented |
+| Red fallback path (left) | `$416A` (scan 4 slots rightward) | `FlagshipSelector.selectRedFallback(swarm, 'left')` | ✅ Implemented |
+| Red fallback path (right) | `$4165` (scan 4 slots leftward) | `FlagshipSelector.selectRedFallback(swarm, 'right')` | ✅ Implemented |
+| Flagship scan (left flank) | `$4179` (scan 4 slots rightward) | `FlagshipSelector.selectFlagship(swarm, 'left')` | ✅ Implemented |
+| Flagship scan (right flank) | `$4176` (scan 4 slots leftward) | `FlagshipSelector.selectFlagship(swarm, 'right')` | ✅ Implemented |
+| Escort scan offset (left) | sub $0F from flagship position | `EscortSelector.selectEscorts()` proximity sort | ✅ Implemented |
+| Escort scan offset (right) | sub $11 from flagship position | `EscortSelector.selectEscorts()` proximity sort | ✅ Implemented |
+| No-blue-or-purple fast path | `$15A3` (A=2, secondary=$08) | `FlagshipAttackCounters.setNoBlueOrPurple(true)` | ✅ Implemented |
+| Game-not-in-play path | `$15A7` | `updateAttackCounters({ isGameInPlay: false })` | ✅ Implemented |
 
 ## Difficulty System
 
