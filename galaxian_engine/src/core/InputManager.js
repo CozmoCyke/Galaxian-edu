@@ -5,6 +5,7 @@ export class InputManager {
     this._justPressed = {};
     this._justReleased = {};
     this._previous = {};
+    this._shiftKey = false;
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onKeyUp = this._onKeyUp.bind(this);
   }
@@ -21,6 +22,7 @@ export class InputManager {
 
   _onKeyDown(e) {
     const code = e.key;
+    this._shiftKey = e.shiftKey;
     if (!this._pressed[code]) {
       this._justPressed[code] = true;
     }
@@ -34,6 +36,9 @@ export class InputManager {
     const code = e.key;
     this._pressed[code] = false;
     this._justReleased[code] = true;
+    if (code === 'Shift') {
+      this._shiftKey = false;
+    }
   }
 
   isDown(key) {
@@ -59,5 +64,7 @@ export class InputManager {
   get firePressed() { return this.wasPressed(' '); }
   get restartPressed() { return this.wasPressed('n') || this.wasPressed('N'); }
   get debugPressed() { return this.wasPressed('F2'); }
+  get f3Pressed() { return this.wasPressed('F3'); }
+  get shiftKey() { return this._shiftKey; }
 
 }
