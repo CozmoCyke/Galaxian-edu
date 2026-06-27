@@ -103,3 +103,67 @@ c71453e feat: select ordinary attackers from swarm flanks
 ## Phase 3 Complete
 
 1925 tests total, 0 failures. Ready for Phase 4 (flagship/escort attacks, enemy bullets, shock state, sound).
+
+## Publication (2026-06-27)
+
+### File Audit
+
+| Check | Result |
+|---|---|
+| Files reviewed | 12 |
+| Unsafe files found | 0 |
+| Private paths found | 0 |
+| Secrets found | 0 |
+| Long ASM blocks copied | 0 |
+| `Math.random()` in attack pipeline | 0 |
+| TODO/FIXME affecting correctness | 0 |
+
+### Branch Structure
+
+```
+origin
+├── main                              e6857aa  ← Phase 3 (after ff-merge)
+├── feat/phase-2-single-inflight-alien 09d4790  ← Phase 2
+├── feat/phase-3-ordinary-attack-scheduler      ← Phase 3 branch
+└── master                            9edeb8e  ← PRIVATE (never pushed)
+```
+
+### Tags
+
+| Tag | Commit | Status |
+|---|---|---|
+| `phase-0.1-complete` | 979ec56 | Published |
+| `phase-2-of-5-complete` | 09d4790 | Published |
+| `phase-3-of-5-complete` | e6857aa | Published |
+
+### Publication Steps
+
+| Step | Description | Verdict |
+|---|---|---|
+| 1/6 | File audit — all 12 files safe for publication | COMPLETE |
+| 2/6 | Tests (1925/1925), browser (0 404), deterministic replay | COMPLETE |
+| 3/6 | Feature branch pushed to origin | COMPLETE |
+| 4/6 | Fast-forward merge into main, pushed | COMPLETE |
+| 5/6 | Annotated tag created and pushed | COMPLETE |
+| 6/6 | Private bundle created and verified | COMPLETE |
+
+### Private Bundle (Phase 3)
+
+```
+File:       galaxian-edu-full-20260627-191429.bundle
+Size:       1,410,370 bytes (1,377 KB)
+SHA-256:    E68871CA0EEDDFDAB30040ACB7ADF357C2E6A770658E2C64ACD5561D1CA7D852
+Location:   C:\dev\git-bundles\galaxian-edu\
+Verify:     OK
+Clone:      OK
+Git fsck:   No corruption
+Branches:   main, master, feat/phase-2-single-inflight-alien, feat/phase-3-ordinary-attack-scheduler
+Tags:       phase-0.1-complete, phase-2-of-5-complete, phase-3-of-5-complete
+Manifest:   galaxian-edu-full-20260627-191429.manifest.txt
+```
+
+### Private Branch Status
+
+- `master` (9edeb8e) — present in local repo and private bundle
+- Never pushed to origin — verified `git ls-remote --heads origin` shows no `refs/heads/master`
+- All provenance-uncertain assets remain private
