@@ -104,9 +104,17 @@ export class InflightController {
   }
 
   update() {
+    const deadSlots = [];
     for (const [slot, record] of this.records) {
+      if (!record.alien.alive || record.alien.isDying || record.alien.isDead) {
+        deadSlots.push(slot);
+        continue;
+      }
       record.flightTick++;
       this._updateRecord(record);
+    }
+    for (const slot of deadSlots) {
+      this.freeSlot(slot, false);
     }
   }
 
