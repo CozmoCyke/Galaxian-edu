@@ -173,3 +173,72 @@ Incremented each time the alien reaches the bottom of the screen ($0E9D). Reset 
 | INFLIGHT_ALIEN_ARC_TABLE | $1E00 | Arc trajectory data |
 | INFLIGHT_ALIENS | $42B0 | Array base address |
 | ALIEN_SWARM_FLAGS | $4100 | Swarm occupation flags |
+
+## Arc Table Analysis
+
+`INFLIGHT_ALIEN_ARC_TABLE` at `$1E00` (103 bytes) contains signed byte pairs for
+trajectory arcs. Two ASM routines consume this table:
+
+| Routine | Address | X operation | Y operation |
+|---------|--------:|-------------|-------------|
+| `INFLIGHT_ALIEN_FLIES_IN_ARC` | `$0D71` | X += ΔX (byte 0) | ArcClockwise=0: Y += ΔY, ArcClockwise=1: Y −= ΔY |
+| `INFLIGHT_ALIEN_LOOP_THE_LOOP` | `$101F` | X −= ΔX | ArcClockwise=0: Y −= ΔY, ArcClockwise=1: Y += ΔY |
+
+### Consumption Pattern
+
+Each tick, both routines:
+1. Read byte 0 (signed X delta) and apply it
+2. `inc L` → read byte 1 (unsigned Y delta) and apply it with sign per table above
+3. `inc L` → advance L by 2 past the consumed pair
+4. Store L back to `ArcTableLsb` (`ix+$13`)
+
+### Termination — `FLIES_IN_ARC`
+
+Termination is **NOT** based on table content. It is purely counter-driven:
+
+- `TempCounter1` (`ix+$10`) = 3 initially (set at `$0D39`), reset to 4 after first
+  expiry (set at `$0D99`/`$0DBD`)
+- `TempCounter2` (`ix+$11`) = 12 animation frames (set at `$0D3D`)
+- Each time `TempCounter1` expires, `TempCounter2` decrements
+- When `TempCounter2` reaches 0, `StageOfLife++` (transition to `READY_TO_ATTACK`)
+- **Total ticks before forced stage advance**: 3 + 11 × 4 = **47 ticks**
+- **Pairs consumed**: 47
+- **Last byte consumed**: offset 93 ($5D, 0-indexed)
+
+### Early Escape — Off-screen Check
+
+Before storing L back, both paths check if `Y + 7 < $0E` (i.e., `Y < 7`). If true:
+
+```
+0D8F: jr c,$0DCC     → $0DCC: ld (ix+$02),$05   ; StageOfLife = 5 (REACHED_BOTTOM)
+0DB3: jr c,$0DCC     → (same for ArcClockwise=1 path)
+```
+
+Note: L is **not** stored back on this path, so the partially-consumed pair is
+effectively discarded. The arc terminates immediately regardless of `TempCounter2`.
+
+### The 103rd Byte (Offset $66)
+
+| Élément | Conclusion |
+|---|---|
+| Taille exacte de la séquence utilisée | 94 bytes (47 pairs) — offsets 0–93 ($00–$5D) |
+| Premier octet consommé | Offset 0 ($00) — first X delta of first pair |
+| Dernier octet consommé | Offset 93 ($5D) — last Y delta of 47th pair |
+| Rôle du 103e octet (offset 102/$66) | Unconsumed padding. Not a sentinel value, not part of a multi-sequence. Belongs to the `INFLIGHT_ALIEN_ARC_TABLE` allocation (`$1E00`–`$1E66` = 103 bytes) but is never read by `FLIES_IN_ARC` or `LOOP_THE_LOOP` during the ordinary alien lifecycle (max 47 ticks × 2 bytes = 94 consumed). The game-start tune follows at `$1E68`. |
+| Condition de fin | `TempCounter2` reaches 0 after 12 animation frames (47 ticks). OR off-screen check `Y + 7 < $0E` triggers `StageOfLife = 5`. |
+| Preuve dans la routine ASM | `$0D3D`: `ld (ix+$11),$0C` (TempCounter2 = 12); `$0DA0`: `dec (ix+$11)`; `$0DA3`: `ret nz`; `$0DA4`: `inc (ix+$02)` (stage++) — no table-end check. Off-screen escape at `$0D8B`–`$0D8F`. |
+
+### LOOP_THE_LOOP Routine
+
+`LOOP_THE_LOOP` (`$101F`) is for the aggressive-alien 360° taunt. It also consumes
+47 pairs from offset 0 (same counters), then resets `ArcTableLsb` to 0 at `$105B`/`$1089`
+and jumps to `FLIES_IN_ARC` (`$108E`). The table is thus used **twice** from offset 0
+for a full loop-the-loop + arc sequence, but neither pass reads beyond offset 93.
+
+### Implications for Extraction
+
+The full 103-byte extraction is **correct** (the table occupies `$1E00`–`$1E66`), but
+only the first 94 bytes (47 pairs) are consumed by the ordinary alien arc sequence.
+The remaining 9 bytes (offsets 94–102, 4.5 pairs) are part of the table allocation
+but unreachable via the ordinary lifecycle. No sentinel, no early termination marker —
+purely timer-driven consumption with an off-screen escape hatch.
