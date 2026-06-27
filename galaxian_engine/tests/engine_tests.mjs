@@ -373,7 +373,7 @@ console.log('\n=== INFLIGHT SLOT POOL ===\n');
   assertEq(pool.isAllocated(2), false, 'slot 2 is not allocated');
 
   assertEq(pool.canAllocate(0), false, 'slot 0 is reserved, cannot allocate');
-  assertEq(pool.canAllocate(3), false, 'slot 3 is reserved, cannot allocate');
+  assertEq(pool.canAllocate(3), true, 'slot 3 can be allocated (flagship/escort slots opened)');
   assertEq(pool.canAllocate(4), false, 'slot 4 is taken, cannot allocate');
   assertEq(pool.canAllocate(7), false, 'slot 7 is taken, cannot allocate');
 
@@ -1270,6 +1270,382 @@ console.log(`\n=== Phase 3 — Refusal Reasons ===`);
   assert(sawMaxInflightRefusal, 'scheduler refused: max inflight');
   assertEq(ctrl.activeCount, 4, 'still 4 active after refusal');
 }
+
+await (async () => {
+  // ===== PHASE 4: FlagshipAttackCounters =====
+  console.log(`\n--- FlagshipAttackCounters ---`);
+  const { FlagshipAttackCounters } = await import('../src/flagship/FlagshipAttackCounters.js');
+
+  {
+    const fc = new FlagshipAttackCounters();
+    assertEq(fc.master1, 0x40, 'initial master1 = $40');
+    assertEq(fc.master2, 0x06, 'initial master2 = $06');
+    assertEq(fc.secondaryEnabled, false, 'secondary not enabled initially');
+    assertEq(fc.canAttack, false, 'canAttack false initially');
+  }
+
+  {
+    const fc = new FlagshipAttackCounters();
+    // Normal path: decrement master1
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: true, isFlagshipHit: false, isGameInPlay: true, difficultyBase: 2, difficultyExtra: 0 });
+    assertEq(fc.master1, 0x3F, 'master1 decremented to $3F after one tick');
+    assertEq(fc.master2, 0x06, 'master2 unchanged while master1 > 0');
+    assertEq(fc.secondaryEnabled, false, 'secondary still not enabled');
+  }
+
+  {
+    const fc = new FlagshipAttackCounters();
+    fc.master1 = 1;
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: true, isFlagshipHit: false, isGameInPlay: true, difficultyBase: 2, difficultyExtra: 0 });
+    assertEq(fc.master1, 0x3C, 'master1 reloaded to $3C after hitting zero');
+  }
+
+  {
+    const fc = new FlagshipAttackCounters();
+    fc.master1 = 1;
+    fc.master2 = 1;
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: true, isFlagshipHit: false, isGameInPlay: true, difficultyBase: 2, difficultyExtra: 0 });
+    assert(fc.master2 > 0, 'master2 set to computed value after master1+master2 hit zero');
+    assert(fc.secondaryEnabled, 'secondary enabled after both masters hit zero');
+    assert(fc.secondary > 0, 'secondary counter set after both masters hit zero');
+  }
+
+  {
+    const fc = new FlagshipAttackCounters();
+    fc.master1 = 1;
+    fc.master2 = 1;
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: true, isFlagshipHit: false, isGameInPlay: true, difficultyBase: 0, difficultyExtra: 0 });
+    assertEq(fc.secondaryEnabled, false, 'secondary not enabled when difficultyBase+extra = 0');
+  }
+
+  {
+    const fc = new FlagshipAttackCounters();
+    assert(fc.master1 > 0, 'master1 > 0 after reset');
+    assertEq(fc.secondaryEnabled, false, 'secondary disabled after reset');
+    assertEq(fc.canAttack, false, 'canAttack false after reset');
+  }
+
+  {
+    // Test game-not-in-play path
+    const fc = new FlagshipAttackCounters();
+    fc.master1 = 1;
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: true, isFlagshipHit: false, isGameInPlay: false });
+    assertEq(fc.master1, 0x3C, 'game-not-in-play: master1 reloaded');
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: true, isFlagshipHit: false, isGameInPlay: false });
+    assertEq(fc.master1, 0x3B, 'game-not-in-play: master1 decrementing normally');
+  }
+
+  {
+    // Test checkCanAttack
+    const fc = new FlagshipAttackCounters();
+    fc.secondaryEnabled = true;
+    fc.secondary = 1;
+    fc.checkCanAttack({ hasPlayerSpawned: true, haveFlagships: true });
+    assertEq(fc.canAttack, true, 'canAttack set when secondary hits zero');
+    assertEq(fc.secondaryEnabled, false, 'secondary disabled after hitting zero');
+  }
+
+  {
+    // Test canAttack blocked by no flagships
+    const fc = new FlagshipAttackCounters();
+    fc.secondaryEnabled = true;
+    fc.secondary = 1;
+    fc.checkCanAttack({ hasPlayerSpawned: true, haveFlagships: false });
+    assertEq(fc.canAttack, false, 'canAttack NOT set when no flagships');
+  }
+
+  {
+    // Test consume
+    const fc = new FlagshipAttackCounters();
+    fc.canAttack = true;
+    fc.consumeAttack();
+    assertEq(fc.canAttack, false, 'canAttack cleared after consume');
+  }
+
+  {
+    // Test guards: no player spawned
+    const fc = new FlagshipAttackCounters();
+    fc.updateAttackCounters({ hasPlayerSpawned: false, haveFlagships: true, isFlagshipHit: false, isGameInPlay: true });
+    assertEq(fc.master1, 0x40, 'master1 unchanged when no player spawned');
+  }
+
+  {
+    // Test guards: no flagships
+    const fc = new FlagshipAttackCounters();
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: false, isFlagshipHit: false, isGameInPlay: true });
+    assertEq(fc.master1, 0x40, 'master1 unchanged when no flagships');
+  }
+
+  {
+    // Test guards: flagship hit
+    const fc = new FlagshipAttackCounters();
+    fc.updateAttackCounters({ hasPlayerSpawned: true, haveFlagships: true, isFlagshipHit: true, isGameInPlay: true });
+    assertEq(fc.master1, 0x40, 'master1 unchanged when flagship hit');
+  }
+})();
+
+await (async () => {
+  // ===== PHASE 4: FlagshipScoreCalculator =====
+  console.log(`\n--- FlagshipScoreCalculator ---`);
+  const { FlagshipScoreCalculator } = await import('../src/flagship/FlagshipScoreCalculator.js');
+
+  {
+    const r = FlagshipScoreCalculator.calculate({ originalEscortCount: 0, livingEscortCount: 0, escortsDestroyedBeforeFlagship: false });
+    assertEq(r.factor, 0, 'no escorts = factor 0');
+    assertEq(r.points, 200, 'no escorts = 200 points');
+  }
+
+  {
+    const r = FlagshipScoreCalculator.calculate({ originalEscortCount: 2, livingEscortCount: 0, escortsDestroyedBeforeFlagship: true });
+    assertEq(r.factor, 3, '2 escorts killed before flagship = factor 3 (full points)');
+    assertEq(r.points, 800, 'full points = 800');
+  }
+
+  {
+    const r = FlagshipScoreCalculator.calculate({ originalEscortCount: 2, livingEscortCount: 2, escortsDestroyedBeforeFlagship: false });
+    assertEq(r.factor, 1, '2 escorts alive when flagship killed = factor 1');
+    assertEq(r.points, 400, 'partial points = 400');
+  }
+
+  {
+    const r = FlagshipScoreCalculator.calculate({ originalEscortCount: 2, livingEscortCount: 1, escortsDestroyedBeforeFlagship: false });
+    assertEq(r.factor, 2, '1 escort alive, 1 dead = factor 2');
+    assertEq(r.points, 600, 'partial points = 600');
+  }
+
+  {
+    const r = FlagshipScoreCalculator.calculate({ originalEscortCount: 1, livingEscortCount: 0, escortsDestroyedBeforeFlagship: true });
+    assertEq(r.factor, 2, '1 escort killed before flagship = factor 2');
+    assertEq(r.points, 600, '600 points for 1 escort killed');
+  }
+
+  {
+    const r = FlagshipScoreCalculator.calculate({ originalEscortCount: 1, livingEscortCount: 1, escortsDestroyedBeforeFlagship: false });
+    assertEq(r.factor, 1, '1 escort alive when flagship killed = factor 1');
+    assertEq(r.points, 400, '400 points for 1 escort alive');
+  }
+})();
+
+await (async () => {
+  // ===== PHASE 4: ShockController =====
+  console.log(`\n--- ShockController ---`);
+  const { ShockController } = await import('../src/flagship/ShockController.js');
+
+  {
+    const sc = new ShockController();
+    assertEq(sc.isActive, false, 'shock inactive initially');
+    assertEq(sc.counter, 0, 'counter = 0 initially');
+  }
+
+  {
+    const sc = new ShockController();
+    const triggered = sc.trigger();
+    assertEq(triggered, true, 'trigger returns true');
+    assertEq(sc.isActive, true, 'shock active after trigger');
+    assertEq(sc.counter, 240, 'counter = 240 after trigger');
+  }
+
+  {
+    const sc = new ShockController();
+    sc.trigger();
+    const second = sc.trigger();
+    assertEq(second, false, 'second trigger returns false (no double trigger)');
+    assertEq(sc.counter, 240, 'counter unchanged after second trigger');
+  }
+
+  {
+    const sc = new ShockController();
+    sc.trigger();
+    sc.update({ noInflightAliens: false });
+    assertEq(sc.counter, 240, 'counter unchanged while inflight aliens active');
+  }
+
+  {
+    const sc = new ShockController();
+    sc.trigger();
+    sc.update({ noInflightAliens: true });
+    assertEq(sc.counter, 239, 'counter decremented when no inflight aliens');
+  }
+
+  {
+    const sc = new ShockController();
+    sc.trigger();
+    for (let i = 0; i < 240; i++) {
+      sc.update({ noInflightAliens: true });
+    }
+    assertEq(sc.isActive, false, 'shock cleared after full duration');
+    assertEq(sc.counter, 0, 'counter = 0 after shock ends');
+  }
+
+  {
+    const sc = new ShockController();
+    sc.trigger();
+    sc.reset();
+    assertEq(sc.isActive, false, 'shock inactive after reset');
+    assertEq(sc.counter, 0, 'counter = 0 after reset');
+  }
+})();
+
+await (async () => {
+  // ===== PHASE 4: FlagshipSelector =====
+  console.log(`\n--- FlagshipSelector ---`);
+  const { FlagshipSelector } = await import('../src/flagship/FlagshipSelector.js');
+
+  {
+    const result = FlagshipSelector.selectFlagship(null, 'left');
+    assertEq(result, null, 'null swarm returns null');
+  }
+
+  {
+    const result = FlagshipSelector.selectFlagship({ layout: { aliens: [], isInFlight: () => false } }, 'left');
+    assertEq(result, null, 'empty swarm returns null');
+  }
+
+  {
+    const result = FlagshipSelector.selectRedFallback(null, 'left');
+    assertEq(result, null, 'red fallback null swarm returns null');
+  }
+
+  {
+    // Note: full integration tests with real Swarm are done in the scheduler tests
+    // These unit tests verify the API contract
+    const mockSwarm = {
+      layout: {
+        aliens: [],
+        isInFlight: () => false
+      }
+    };
+    assertEq(FlagshipSelector.selectFlagship(mockSwarm, 'left'), null, 'no flagships returns null');
+    assertEq(FlagshipSelector.selectRedFallback(mockSwarm, 'left'), null, 'no red aliens returns null');
+  }
+})();
+
+await (async () => {
+  // ===== PHASE 4: EscortSelector =====
+  console.log(`\n--- EscortSelector ---`);
+  const { EscortSelector } = await import('../src/flagship/EscortSelector.js');
+
+  {
+    const result = EscortSelector.selectEscorts(null, null);
+    assertEq(result.length, 0, 'null swarm returns empty array');
+  }
+
+  {
+    const mockSwarm = {
+      layout: {
+        aliens: [],
+        isInFlight: () => false
+      }
+    };
+    const flagship = { col: 0, row: 5 };
+    const result = EscortSelector.selectEscorts(mockSwarm, flagship);
+    assertEq(result.length, 0, 'no red aliens returns empty array');
+  }
+})();
+
+await (async () => {
+  // ===== PHASE 4: InflightSlotPool flagship/escort methods =====
+  console.log(`\n--- InflightSlotPool flagship/escort methods ---`);
+  const { InflightSlotPool } = await import('../src/inflight/InflightSlotPool.js');
+
+  {
+    const pool = new InflightSlotPool();
+    assertEq(pool.hasFreeFlagshipSlot(), true, 'flagship slot free initially');
+    assertEq(pool.hasFreeEscortSlot(), true, 'escort slot free initially');
+
+    const fs = pool.allocateFlagshipSlot();
+    assertEq(fs, 1, 'flagship slot = 1');
+    assertEq(pool.hasFreeFlagshipSlot(), false, 'flagship slot busy after allocate');
+
+    const es1 = pool.allocateEscortSlot();
+    assertEq(es1, 2, 'first escort slot = 2');
+    const es2 = pool.allocateEscortSlot();
+    assertEq(es2, 3, 'second escort slot = 3');
+    assertEq(pool.hasFreeEscortSlot(), false, 'escort slots busy after allocate');
+  }
+
+  {
+    const pool = new InflightSlotPool();
+    const group = pool.allocateFlagshipGroup();
+    assert(group !== null, 'flagship group allocated');
+    assertEq(group.flagshipSlot, 1, 'group flagship slot = 1');
+    assertEq(group.escortSlots.length, 2, 'group has 2 escort slots');
+    assertEq(pool.hasFreeFlagshipSlot(), false, 'flagship busy after group alloc');
+  }
+
+  {
+    const pool = new InflightSlotPool();
+    const group = pool.allocateFlagshipGroup();
+    pool.freeFlagshipGroup(group);
+    assertEq(pool.hasFreeFlagshipSlot(), true, 'flagship free after group free');
+    assertEq(pool.hasFreeEscortSlot(), true, 'escort slots free after group free');
+  }
+
+  {
+    const pool = new InflightSlotPool();
+    // Occupy slots 4-7 (all ordinary slots)
+    for (let i = 4; i <= 7; i++) {
+      pool.allocate(i);
+    }
+    // Should still be able to allocate flagship group
+    const group = pool.allocateFlagshipGroup();
+    assert(group !== null, 'flagship group allocatable with all ordinary slots busy');
+    assertEq(group.escortSlots.length, 2, 'escorts allocated despite busy ordinary slots');
+  }
+
+  {
+    const pool = new InflightSlotPool();
+    // Occupy flagship slot
+    pool.allocate(1);
+    const group = pool.allocateFlagshipGroup();
+    assertEq(group, null, 'flagship group fails when flagship slot occupied');
+  }
+})();
+
+await (async () => {
+  // ===== PHASE 4: FlagshipAttackScheduler integration =====
+  console.log(`\n--- FlagshipAttackScheduler integration ---`);
+  const { Swarm } = await import('../src/entities/swarm/Swarm.js');
+  const { InflightController } = await import('../src/inflight/InflightController.js');
+  const { FlagshipAttackScheduler } = await import('../src/flagship/FlagshipAttackScheduler.js');
+
+  {
+    const sched = new FlagshipAttackScheduler();
+    assertEq(sched.enabled, false, 'flagship scheduler disabled by default');
+    assertEq(sched.lastRefusalReason, 'none', 'initial refusal reason = none');
+  }
+
+  {
+    const sched = new FlagshipAttackScheduler();
+    sched.setEnabled(true);
+    const result = sched.update(null, null, { gameState: 'playing' });
+    assertEq(sched.lastRefusalReason, 'no aliens in swarm', 'null swarm refusal');
+  }
+
+  {
+    const swarm = new Swarm();
+    const ctrl = new InflightController();
+    const sched = new FlagshipAttackScheduler();
+    sched.setEnabled(true);
+    const result = sched.update(swarm, ctrl, { gameState: 'playerDying' });
+    assert(sched.lastRefusalReason.includes('game state'), 'playerDying blocks flagship scheduler');
+  }
+
+  {
+    const swarm = new Swarm();
+    const ctrl = new InflightController();
+    const sched = new FlagshipAttackScheduler();
+    sched.setEnabled(true);
+    const result = sched.update(swarm, ctrl, { gameState: 'gameOver' });
+    assert(sched.lastRefusalReason.includes('game state'), 'gameOver blocks flagship scheduler');
+  }
+
+  {
+    const sched = new FlagshipAttackScheduler();
+    sched.reset();
+    assertEq(sched.lastRefusalReason, 'none', 'refusal reset');
+  }
+})();
 
 console.log(`\n=== SUMMARY ===`);
 console.log(`Passed: ${passed}`);
