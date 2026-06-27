@@ -102,6 +102,25 @@ FF 01  00 01  FF 01  00 01  00 01  FF 01  00 01  00 01
 4. Set IndexInSwarm from HL
 5. Queue DELETE_ALIEN_COMMAND
 
+## SwarmIndex Formula
+
+In the JS engine, `swarmIndex` is computed as:
+
+```
+swarmIndex = row * SWARM_ROW_SIZE + SWARM_INDEX_OFFSET + col
+```
+
+Where `SWARM_ROW_SIZE = 16` and `SWARM_INDEX_OFFSET = 3`.
+
+This matches the ASM layout where each row occupies 16 bytes in `ALIEN_SWARM_FLAGS` ($4100), and the first visible alien in each row starts at column offset 3 (indices $00, $01, $02 are empty padding before the first alien column).
+
+Example for blue alien at visual row 0, col 0:
+```
+swarmIndex = 0 × 16 + 3 + 0 = 3 = $03
+```
+
+SwarmIndices $00, $01, $02 are always empty (no alien exists at those positions).
+
 ## Start Position Calculation
 
 `SET_INFLIGHT_ALIEN_START_POSITION` ($1147):

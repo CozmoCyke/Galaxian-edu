@@ -64,6 +64,33 @@ for (const a of layout) {
 }
 assertEq(indices.size, 46, 'all swarmIndex values are unique');
 
+console.log('\n=== SWARM INDEX FORMULA ===\n');
+
+{
+  const alien00 = layout.getAlien(0, 0);
+  assertEq(alien00 !== null, true, 'row 0 col 0 has an alien');
+  assertEq(alien00.swarmIndex, 3, 'row 0 col 0 swarmIndex === $03 (SWARM_INDEX_OFFSET=3)');
+
+  assertEq(layout.getAlienBySwarmIndex(0), null, 'swarmIndex $00 is empty');
+  assertEq(layout.getAlienBySwarmIndex(1), null, 'swarmIndex $01 is empty');
+  assertEq(layout.getAlienBySwarmIndex(2), null, 'swarmIndex $02 is empty');
+
+  const alien01 = layout.getAlien(0, 1);
+  assertEq(alien01.swarmIndex, 4, 'row 0 col 1 swarmIndex === $04');
+
+  const alien09 = layout.getAlien(0, 9);
+  assertEq(alien09.swarmIndex, 12, 'row 0 col 9 swarmIndex === $0C');
+
+  const alienPurple = layout.getAlien(3, 1);
+  assertEq(alienPurple.swarmIndex, 3 * 16 + 3 + 1, `purple row 3 col 1 swarmIndex === ${3 * 16 + 3 + 1}`);
+
+  const alienRed = layout.getAlien(4, 2);
+  assertEq(alienRed.swarmIndex, 4 * 16 + 3 + 2, `red row 4 col 2 swarmIndex === ${4 * 16 + 3 + 2}`);
+
+  const alienFlag = layout.getAlien(5, 3);
+  assertEq(alienFlag.swarmIndex, 5 * 16 + 3 + 3, `flagship row 5 col 3 swarmIndex === ${5 * 16 + 3 + 3}`);
+}
+
 console.log('\n=== EMPTY SLOTS ===\n');
 
 for (let r = 0; r < CONFIG.SWARM.ROWS; r++) {
