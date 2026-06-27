@@ -1,0 +1,9 @@
+{
+  "name": "galaxian-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/engine_tests.mjs"
+  }
+}

@@ -1,0 +1,338 @@
+{
+  "download_date": "2026-06-27 12:13:04",
+  "total_original_files": 33,
+  "files": [
+    {
+      "category": "data",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/appmanifest.json",
+      "mime_type": "application/json",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "213eb7a19c161d92cf9ba826b6786f56e9ce7ad1b75a189d37e862fa91ccdc15",
+      "size_bytes": 542,
+      "local_path": "original/appmanifest.json",
+      "download_status": "success"
+    },
+    {
+      "category": "code",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/c2runtime.js",
+      "mime_type": "application/javascript",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "1d3d083dfcc233e2d35c6c0addd34b96d5ed3c7d271419c1644a21fe2cdd16d8",
+      "size_bytes": 195847,
+      "local_path": "original/c2runtime.js",
+      "download_status": "success"
+    },
+    {
+      "category": "code",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/data.js",
+      "mime_type": "application/javascript",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "cd1eeb1f7a46ad3cbddaf8282c2beca7ab7044031ebeb58fc98405833d68a3c4",
+      "size_bytes": 26522,
+      "local_path": "original/data.js",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/icon-114.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "be1515be4799447784005c7e06f71cf493d05881c30e5880dab8fb7ad453297d",
+      "size_bytes": 25223,
+      "local_path": "original/icon-114.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/icon-128.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "9144b06589551cab2217f99be40af85c4c970037e5b13e5da859d2e5563aa1ef",
+      "size_bytes": 33382,
+      "local_path": "original/icon-128.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/icon-16.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "0fc463ba69419b02d929e1a0aa47ef40f23b3a171758c67bfb80e2e31ce7beed",
+      "size_bytes": 1041,
+      "local_path": "original/icon-16.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/icon-256.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "bd9aa51038e08b59b54e707f0a1f48a4c11816afa11c39f3008e439ddd61cff1",
+      "size_bytes": 98347,
+      "local_path": "original/icon-256.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/icon-32.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "3e050c4168412f9e516bd5e02aaba761189ada0d9d2bfaa6c66b14138a56313b",
+      "size_bytes": 2967,
+      "local_path": "original/icon-32.png",
+      "download_status": "success"
+    },
+    {
+      "category": "code",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/index.html",
+      "mime_type": "text/html",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "5c63fb837afd50aec1437ef048fa2e1003d43ce8215f4654ce1bb0ca4e0275cb",
+      "size_bytes": 4650,
+      "local_path": "original/index.html",
+      "download_status": "success"
+    },
+    {
+      "category": "code",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/jquery-2.1.1.min.js",
+      "mime_type": "application/javascript",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "9451ed8fd4c4fd0d216a5f3e80409c0f8759a404fb1dda1f9b8b27aa39d74a6f",
+      "size_bytes": 84248,
+      "local_path": "original/jquery-2.1.1.min.js",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/loading-logo.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "a9125b3bf4c2782af4e76825c26254c05d4fe40fcf1c1ed54c5c4a9be294f7df",
+      "size_bytes": 9375,
+      "local_path": "original/loading-logo.png",
+      "download_status": "success"
+    },
+    {
+      "category": "data",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/offline.appcache",
+      "mime_type": "text/cache-manifest",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "bf4e3b6d08db495110f426b4dc82b19f9f13368182cd477666f72814a185e635",
+      "size_bytes": 669,
+      "local_path": "original/offline.appcache",
+      "download_status": "success"
+    },
+    {
+      "category": "code",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/sw.js",
+      "mime_type": "application/javascript",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "69dc977fdfbe03ce286c3ccd98350ca6562a90edb6f40fe3211e4870121bd7fe",
+      "size_bytes": 294,
+      "local_path": "original/sw.js",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/backgroundstar-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "34de181f1014c390942bc623af2cb8a22902c0f81d4c63e848583b3057db174f",
+      "size_bytes": 128,
+      "local_path": "original/images/backgroundstar-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/enemyexplosion.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "4c3e974d4b7a8294ccc91ef556cf2b06329e8eec9e37ebf5a668343a3fb0a4d5",
+      "size_bytes": 146,
+      "local_path": "original/images/enemyexplosion.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/launchcollider-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "cba97636c98d1aa679db03da7cebcc484eae7d89dd61f0347407836bc3af4322",
+      "size_bytes": 116,
+      "local_path": "original/images/launchcollider-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/marker-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "2cb2f312963678f3f00d27f02123d7f3bbea1db121642b271a94e8d0171ff1ed",
+      "size_bytes": 139,
+      "local_path": "original/images/marker-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/player-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "26ecf0c23aa832732e8f5c6893b922c0f8907604592f3b247f9cb060c6aec216",
+      "size_bytes": 595,
+      "local_path": "original/images/player-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/playerbullet-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "cb2a57024d6f64b05b376984c57eedd1fdc072807012ac23e4fb7a385a9a0bd1",
+      "size_bytes": 92,
+      "local_path": "original/images/playerbullet-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/playerexplosion.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "43e4d069e03e454d6d959334b95798c4bdca29cacd3dae695931fbfd5145dcb4",
+      "size_bytes": 128,
+      "local_path": "original/images/playerexplosion.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/scorelabel.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "686c47a6b846222d9e31f4f01809ac3d6c3ceadb793024ab7d2cdd5381c23556",
+      "size_bytes": 67437,
+      "local_path": "original/images/scorelabel.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/ship1-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "b323ad138259c6071e50d45d3c79b50da64080c9a6e9dfc6cf5e221014458e6c",
+      "size_bytes": 509,
+      "local_path": "original/images/ship1-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/ship2-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "f950649ab1ad25b29aa8fb4e30085d92276f8fd3cc54ffa3e178c5b901b73186",
+      "size_bytes": 572,
+      "local_path": "original/images/ship2-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/ship3-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "766c78c756400a380ea9b1e371223d83577018f08b953e4f5ca9cfdb7d737491",
+      "size_bytes": 518,
+      "local_path": "original/images/ship3-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "image",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/images/ship4-sheet0.png",
+      "mime_type": "image/png",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "b34a6e820afa8c625c037a1fd0bbedec536fb80196c1eeaca0de550a7d03b875",
+      "size_bytes": 461,
+      "local_path": "original/images/ship4-sheet0.png",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/attack.m4a",
+      "mime_type": "audio/mp4",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "c72948720b3f4b0ae8f8732714e87adf31dabbd5e99c80c6b9d92463eb7a45e6",
+      "size_bytes": 22307,
+      "local_path": "original/media/attack.m4a",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/attack.ogg",
+      "mime_type": "audio/ogg",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "23d9cf4b22ddb8df6a2cd1ef07e0879bf4ed48d85d21446d4f9b724cff51b740",
+      "size_bytes": 30285,
+      "local_path": "original/media/attack.ogg",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/longexplode.m4a",
+      "mime_type": "audio/mp4",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "9f2c471226101105ff3c4768443546a5f550db359264150e3376913352de07e6",
+      "size_bytes": 100470,
+      "local_path": "original/media/longexplode.m4a",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/longexplode.ogg",
+      "mime_type": "audio/ogg",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "f1e126605a386f388397b4c708c5ac24a56cbd9bb93b29a5ef285dde2a8930ed",
+      "size_bytes": 90350,
+      "local_path": "original/media/longexplode.ogg",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/shoot.m4a",
+      "mime_type": "audio/mp4",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "bcae35b50cb240017d1be4f31899962fbc0a0ee4efdd0b991087261bfbee88f9",
+      "size_bytes": 7329,
+      "local_path": "original/media/shoot.m4a",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/shoot.ogg",
+      "mime_type": "audio/ogg",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "3148bf922ea5c709ec1692f36c169ec740cb2480ed1f49899569b425bedcee6f",
+      "size_bytes": 9892,
+      "local_path": "original/media/shoot.ogg",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/shortexplode.m4a",
+      "mime_type": "audio/mp4",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "b0b87e75304997418d3929eea62f2bd0fc13c81b40b51e4a6b1798a79d767bd0",
+      "size_bytes": 8112,
+      "local_path": "original/media/shortexplode.m4a",
+      "download_status": "success"
+    },
+    {
+      "category": "sound",
+      "original_url": "https://studio2.org.uk/c2/Galaxians/media/shortexplode.ogg",
+      "mime_type": "audio/ogg",
+      "discovery_method": "offline.appcache / HTML",
+      "sha256": "f9a39b72fdfbe85c4e5bad12e04b5d6cfe4141670ae974725bd65a54d19ef8b2",
+      "size_bytes": 11401,
+      "local_path": "original/media/shortexplode.ogg",
+      "download_status": "success"
+    }
+  ],
+  "project": "Galaxians",
+  "source_url": "https://studio2.org.uk/c2/Galaxians/"
+}

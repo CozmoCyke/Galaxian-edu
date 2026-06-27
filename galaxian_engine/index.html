@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=576, initial-scale=1.0">
+  <title>Galaxian Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: monospace;
+      color: #fff;
+    }
+    #gameContainer {
+      position: relative;
+      width: 576px;
+      height: 480px;
+    }
+    #gameCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 576px; height: 480px;
+      image-rendering: pixelated;
+    }
+    #debugCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 576px; height: 480px;
+      pointer-events: none;
+      image-rendering: pixelated;
+    }
+    #uiOverlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #uiOverlay .message {
+      position: absolute;
+      bottom: 80px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-family: monospace;
+      font-size: 14px;
+      color: #ffcc00;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="288" height="240"></canvas>
+    <canvas id="debugCanvas" width="288" height="240"></canvas>
+    <div id="uiOverlay">
+      <div id="message" class="message"></div>
+    </div>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

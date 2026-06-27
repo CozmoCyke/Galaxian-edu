@@ -1,0 +1,118 @@
+# ASM Mapping — galaxian.engine ↔ galaxian.asm
+
+This document maps each concept from the original Galaxian Z80 disassembly
+(`project/galaxian.asm`) to its equivalent JavaScript implementation in
+`galaxian_engine`.
+
+## Formation & Swarm
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `ALIEN_SWARM_FLAGS` | `$4100–$417F` (128 bytes) | `SwarmLayout._grid` (6×10 slot array + `Alien` objects) | ✅ Implemented |
+| Swarm row flags (presence per row) | `HAVE_ALIENS_IN_6TH_ROW` etc. `$41EA–$41EF` | `SwarmLayout.getAliveInRow(row).length > 0` | ✅ Implicit |
+| Swarm column flags | `ALIEN_IN_COLUMN_FLAGS` `$41F0–$41FF` | `SwarmLayout.getAliveInCol(col).length > 0` | ✅ Implicit |
+| `SWARM_DIRECTION` | `$420D` (0=left, 1=right) | `Swarm.direction` (-1=left, 1=right) | ✅ Implemented |
+| `SWARM_SCROLL_VALUE` | `$420E` (16-bit scroll offset) | `Swarm.offsetX` | ✅ Implemented |
+| `SWARM_SCROLL_MAX_EXTENTS` | `$4210` | `CONFIG.SWARM.LIMIT_LEFT` / `LIMIT_RIGHT` | ✅ Implemented |
+| `HAVE_NO_ALIENS_IN_SWARM` | `$4220` | `Swarm.aliveCount === 0` | ✅ Implicit |
+| `HAVE_NO_BLUE_OR_PURPLE_ALIENS` | `$4221` | `getAliveInRow(0).length + getAliveInRow(1).length + getAliveInRow(2).length + getAliveInRow(3).length === 0` | 🔲 Future |
+| `LEVEL_COMPLETE` | `$4222` | `aliveCount === 0` → level transition | ✅ Implemented |
+
+## Inflight Aliens
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `INFLIGHT_ALIENS` pool | `$42B0–$43AF` (8×32 bytes) | `inflightAliens[]` (planned `InflightAlienPool`) | 🔲 Future |
+| `StageOfLife` (0–13) | field in struct | `InflightAlien.stage` (enum) | 🔲 Future |
+| Slot 0 = flagship | reserved | `InflightAlien.isFlagship` | 🔲 Future |
+| Slots 1–2 = escorts | reserved | `InflightAlien.isEscort` | 🔲 Future |
+| Slots 3–7 = singles | reserved | standard `InflightAlien` | 🔲 Future |
+| `INFLIGHT_ALIEN_ARC_TABLE` | `$1E00` (103 bytes) | `arcTable[]` (∆X, ∆Y pairs) | 🔲 Future |
+
+## Alien Attack System
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| Master attack counter | `$424A` | `attackCounters.master` | 🔲 Future |
+| Secondary attack counters | `$424B–$425A` | `attackCounters.secondary[16]` | 🔲 Future |
+| Flagship master counters | `$4245–$4246` | `attackCounters.flagshipMaster[2]` | 🔲 Future |
+| `ALIENS_ATTACK_FROM_RIGHT_FLANK` | `$4215` | `attackCounters.flank` | 🔲 Future |
+| `CAN_ALIEN_ATTACK` | `$4228` | computed from counters | 🔲 Future |
+| `CAN_FLAGSHIP_OR_RED_ALIENS_ATTACK` | `$4229` | computed from counters | 🔲 Future |
+| `FLAGSHIP_ESCORT_COUNT` | `$422A` | `FLAGSHIP_ESCORT_COUNT` | 🔲 Future |
+| `IS_FLAGSHIP_HIT` | `$422B` | `isFlagshipHit` | 🔲 Future |
+| `ALIENS_IN_SHOCK_COUNTER` | `$422C` | `shockCounter` | 🔲 Future |
+
+## Difficulty System
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `DIFFICULTY_COUNTER_1` | `$4218` | `difficulty.counter1` | 🔲 Future |
+| `DIFFICULTY_COUNTER_2` | `$4219` | `difficulty.counter2` | 🔲 Future |
+| `DIFFICULTY_EXTRA_VALUE` | `$421A` (0–7) | `difficulty.extraValue` | 🔲 Future |
+| `DIFFICULTY_BASE_VALUE` | `$421B` (0–7) | `difficulty.baseValue` | 🔲 Future |
+| `PLAYER_LEVEL` | `$421C` (starts at 0) | `Game.level` (starts at 1) | ✅ Partial |
+
+## Player
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `HAS_PLAYER_SPAWNED` | `$4200` | `Player.alive` | ✅ Implicit |
+| `IS_PLAYER_DYING` | `$4201` | `PlayerDyingState` | ✅ Implemented |
+| `PLAYER_Y` | `$4202` | `Player.y` (constant for now) | ✅ Partial |
+| `IS_PLAYER_HIT` | `$4204` | `Player.hit()` → dying state | ✅ Implemented |
+| `PLAYER_EXPLOSION_COUNTER` | `$4205` | `PlayerDyingState._timer` | ✅ Implemented |
+| `HAS_PLAYER_BULLET_BEEN_FIRED` | `$4208` | `PlayerBullet.active` | ✅ Implemented |
+| `PLAYER_BULLET_X` / `Y` | `$4209–$420A` | `PlayerBullet.x` / `y` | ✅ Implemented |
+| `IS_PLAYER_BULLET_DONE` | `$420B` | `PlayerBullet.active === false` | ✅ Implicit |
+
+## Sound
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `PLAY_PLAYER_SHOOT_SOUND` | `$41CC` | `AudioManager.play('shoot')` | 🔲 Future |
+| `IS_COMPLEX_SOUND_PLAYING` | `$41CD` | `AudioManager.isPlaying` | 🔲 Future |
+| `PLAY_GAME_START_MELODY` | `$41D1` | `AudioManager.playMelody()` | 🔲 Future |
+| `ALIEN_DEATH_SOUND` | `$41DF` | `AudioManager.play('explosion')` | 🔲 Future |
+| `RESET_SWARM_SOUND_TEMPO` | `$41D0` | `AudioManager.resetTempo()` | 🔲 Future |
+| Sound registers | `$6800–$6807` | Web Audio API oscillator nodes | 🔲 Future |
+
+## Scoring
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `PLAYER_ONE_SCORE` | `$40A2–$40A4` (3 BCD bytes) | `Game.score` (integer) | ✅ Implemented |
+| `HI_SCORE` | `$40A8–$40AA` (3 BCD bytes) | `Game.highScore` (integer) | ✅ Implemented |
+| `BONUS_GALIXIP` | `$40AC` (extra life threshold) | `CONFIG.SCORE.EXTRA_LIFE_INTERVAL` | ✅ Partially |
+| `FLAGSHIP_SCORE_FACTOR` | `$422D` | `CONFIG.ALIEN_TYPES.FLAGSHIP.score` | ✅ Marked provisional |
+
+## Attract Mode
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `ATTRACT_MODE_FAKE_CONTROLLER` | `$423F` | `FakeController` class | 🔲 Future |
+| `ATTRACT_MODE_SCROLL_ID` | `$4241` | Scrolling text system | 🔲 Future |
+| Script ONE stages | `SCRIPT_ONE` | `AttractState` with sub-states | 🔲 Future |
+
+## Game State / Script System
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `SCRIPT_NUMBER` | `$4005` (0–4) | `StateMachine.currentName` | ✅ Mapped |
+| `SCRIPT_STAGE` | `$400A` | State-specific stage/timer | ✅ Partial |
+| Script 0 = Clear/Init | N/A | `BootState` | ✅ Implemented |
+| Script 1 = Attract/Demo | N/A | `AttractState` | 🔲 Future |
+| Script 2 = Credit/Wait | N/A | implicit `BootState` → `PlayState` transition | ✅ Partial |
+| Script 3 = Gameplay P1 | N/A | `PlayState` | ✅ Implemented |
+| Script 4 = Gameplay P2 | N/A | (two-player stub) | 🔲 Future |
+
+---
+
+## Legend
+
+| Status | Meaning |
+|---|---|
+| ✅ Implemented | Feature exists and is functionally equivalent |
+| ✅ Partial | Feature exists but needs tuning to match ASM exactly |
+| ✅ Implicit | Feature is computed/derived, not explicitly stored |
+| 🔲 Future | Not yet implemented; planned for later phases |

@@ -1,0 +1,33 @@
+node_modules/
+tools/node_modules/
+
+# Third-party / uncertain provenance — do not publish
+app/
+org/
+project/
+galaxian_basic/
+galaxian.asm
+
+# Engine assets copied from project/ (ROM-derived)
+galaxian_engine/assets/
+
+# Build & output artifacts
+*.log
+dist/
+build/
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temp
+.screenshot.png
