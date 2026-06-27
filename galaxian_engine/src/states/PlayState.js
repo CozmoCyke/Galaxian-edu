@@ -3,6 +3,7 @@ import { Renderer } from '../rendering/Renderer.js';
 import { Player } from '../entities/Player.js';
 import { PlayerBullet } from '../entities/PlayerBullet.js';
 import { Swarm } from '../entities/swarm/Swarm.js';
+import { InflightController } from '../inflight/InflightController.js';
 
 export class PlayState {
 
@@ -19,10 +20,17 @@ export class PlayState {
     this.player = new Player(this.game);
     this.playerBullet = new PlayerBullet(this.game);
     this.swarm = new Swarm();
+    this.inflightCtrl = new InflightController();
 
     this.game.score = 0;
     this.game.lives = 3;
     this.game.level = 1;
+  }
+
+  _launchDebugAlien(clockwise) {
+    const alien = this.swarm.getAlienAt(0, 0);
+    if (!alien) return;
+    this.inflightCtrl.launchOrdinaryAlien(alien, this.swarm, clockwise);
   }
 
   exit() {
@@ -39,6 +47,11 @@ export class PlayState {
     this.playerBullet.update();
     this._checkCollisions();
     this.swarm.update();
+    this.inflightCtrl.update();
+
+    if (this.game.input.f3Pressed) {
+      this._launchDebugAlien(this.game.input.shiftKey);
+    }
   }
 
   _fireBullet() {
