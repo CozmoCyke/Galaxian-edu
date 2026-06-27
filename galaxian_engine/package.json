@@ -5,5 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node tests/engine_tests.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1"
   }
 }
