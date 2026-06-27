@@ -1,5 +1,7 @@
 import { CONFIG } from '../config.js';
 
+let _nextId = 1;
+
 const STATE = {
   IN_FORMATION:    'inFormation',
   LEAVING:         'leavingFormation',
@@ -16,6 +18,7 @@ export { STATE };
 export class Alien {
 
   constructor(swarmIndex, row, col, type) {
+    this.id = _nextId++;
     this.swarmIndex = swarmIndex;
     this.row = row;
     this.col = col;
@@ -91,6 +94,9 @@ export class Alien {
   get isInFlight() { return this.state === STATE.IN_FLIGHT; }
   get isReturning() { return this.state === STATE.RETURNING; }
   get isActive() { return this.state !== STATE.DEAD && this.state !== STATE.DYING; }
+
+  get isFlagship() { return this.type === 'flagship'; }
+  get isAlive() { return this.alive; }
 
   get scoreValue() {
     const typeConfig = CONFIG.ALIEN_TYPES[this.type.toUpperCase()];

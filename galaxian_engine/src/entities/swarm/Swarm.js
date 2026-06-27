@@ -48,6 +48,7 @@ export class Swarm {
     return this.layout.getAlien(row, col);
   }
 
+  isDead() { return this.layout.aliveCount === 0; }
   get aliveCount() { return this.layout.aliveCount; }
   get inFormationCount() { return this.layout.inFormationCount; }
   get totalCount() { return this.layout.totalCount; }
