@@ -3,6 +3,8 @@ import { SwarmLayout } from '../src/entities/swarm/SwarmLayout.js';
 import { Alien } from '../src/entities/Alien.js';
 import { Swarm } from '../src/entities/swarm/Swarm.js';
 import { InflightSlotPool } from '../src/inflight/InflightSlotPool.js';
+import { InflightController } from '../src/inflight/InflightController.js';
+import { STATE } from '../src/entities/Alien.js';
 
 let passed = 0;
 let failed = 0;
@@ -217,6 +219,78 @@ assert(typeof CONFIG.FIXED_STEP_MS === 'number', 'FIXED_STEP_MS is a number');
 assertEq(CONFIG.FIXED_STEP_MS, 1000 / 60, 'FIXED_STEP_MS === 1000/60');
 assertEq(CONFIG.LOGIC_HZ, 60, 'LOGIC_HZ === 60');
 assert(CONFIG.MAX_FRAME_SKIP > 0, 'MAX_FRAME_SKIP > 0');
+
+console.log('\n=== INFLIGHT CONTROLLER ===\n');
+
+{
+  const swarm = new Swarm();
+  const ctrl = new InflightController();
+  const alien = swarm.getAlienAt(0, 0);
+
+  assertEq(alien.isInFormation, true, 'alien initially in formation');
+  assertEq(ctrl.activeCount, 0, 'no active inflight records initially');
+
+  const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
+  assertEq(rec !== null, true, 'launchOrdinaryAlien returns a record');
+  assertEq(ctrl.activeCount, 1, 'one inflight record after launch');
+
+  assertEq(alien.isLeaving, true, 'alien state is LEAVING after launch');
+  assertEq(alien.isInFormation, false, 'alien is no longer in formation');
+
+  assertEq(rec.slot, 7, 'first ordinary alien gets slot 7');
+  assertEq(rec.swarmIndex, alien.swarmIndex, 'record preserves swarmIndex');
+  assertEq(rec.clockwise, 0, 'clockwise is 0 for left arc');
+  assertEq(rec.x, alien.renderX, 'record starts at alien renderX');
+  assertEq(rec.y, alien.renderY, 'record starts at alien renderY');
+
+  const rec2 = ctrl.launchOrdinaryAlien(alien, swarm, false);
+  assertEq(rec2, null, 'second simultaneous launch refused');
+
+  ctrl.update();
+  assertEq(alien.isInFlight, true, 'after update, alien state is IN_FLIGHT');
+  assertEq(rec.stageOfLife, 1, 'stage progresses to FLIES_IN_ARC (1)');
+
+  ctrl.freeSlot(rec.slot);
+  assertEq(ctrl.activeCount, 0, 'after free, no active records');
+
+  const rec3 = ctrl.launchOrdinaryAlien(alien, swarm, true);
+  assertEq(rec3 !== null, true, 'launch succeeds again after free');
+  assertEq(rec3.clockwise, 1, 'clockwise is 1 for right arc');
+}
+
+{
+  const swarm = new Swarm();
+  const ctrl = new InflightController();
+
+  const deadAlien = swarm.getAlienAt(1, 1);
+  deadAlien.kill();
+  for (let i = 0; i < 20; i++) deadAlien.update(0, 0);
+  assertEq(deadAlien.isDead, true, 'alien is dead');
+
+  const recDead = ctrl.launchOrdinaryAlien(deadAlien, swarm, false);
+  assertEq(recDead, null, 'dead alien cannot launch');
+  assertEq(ctrl.activeCount, 0, 'no inflight records for dead alien');
+}
+
+{
+  const swarm = new Swarm();
+  const ctrl = new InflightController();
+
+  const a1 = swarm.getAlienAt(0, 0);
+  const a2 = swarm.getAlienAt(0, 1);
+  const a3 = swarm.getAlienAt(0, 2);
+  const a4 = swarm.getAlienAt(0, 3);
+
+  assertEq(ctrl.launchOrdinaryAlien(a1, swarm, false) !== null, true, 'launch 1 ok');
+  assertEq(ctrl.launchOrdinaryAlien(a2, swarm, false) !== null, true, 'launch 2 ok');
+  assertEq(ctrl.launchOrdinaryAlien(a3, swarm, false) !== null, true, 'launch 3 ok');
+  assertEq(ctrl.launchOrdinaryAlien(a4, swarm, false) !== null, true, 'launch 4 ok');
+
+  const a5 = swarm.getAlienAt(0, 4);
+  const recOverflow = ctrl.launchOrdinaryAlien(a5, swarm, false);
+  assertEq(recOverflow, null, 'no slot free for 5th ordinary alien');
+  assertEq(ctrl.activeCount, 4, '4 records active (slots 4-7 full)');
+}
 
 console.log('\n=== INFLIGHT SLOT POOL ===\n');
 

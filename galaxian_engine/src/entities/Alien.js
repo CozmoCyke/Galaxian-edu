@@ -68,10 +68,28 @@ export class Alien {
     this.alive = true;
   }
 
+  leaveFormation() {
+    if (this.state !== STATE.IN_FORMATION) return false;
+    this.state = STATE.LEAVING;
+    return true;
+  }
+
+  beginFlight() {
+    if (this.state !== STATE.LEAVING) return false;
+    this.state = STATE.IN_FLIGHT;
+    return true;
+  }
+
+  returnToFormation() {
+    this.state = STATE.IN_FORMATION;
+  }
+
   get isInFormation() { return this.state === STATE.IN_FORMATION; }
   get isDying() { return this.state === STATE.DYING; }
   get isDead() { return this.state === STATE.DEAD; }
+  get isLeaving() { return this.state === STATE.LEAVING; }
   get isInFlight() { return this.state === STATE.IN_FLIGHT; }
+  get isReturning() { return this.state === STATE.RETURNING; }
   get isActive() { return this.state !== STATE.DEAD && this.state !== STATE.DYING; }
 
   get scoreValue() {
