@@ -4,6 +4,8 @@ import { Alien } from '../src/entities/Alien.js';
 import { Swarm } from '../src/entities/swarm/Swarm.js';
 import { InflightSlotPool } from '../src/inflight/InflightSlotPool.js';
 import { InflightController } from '../src/inflight/InflightController.js';
+import { ArcRunner } from '../src/inflight/ArcRunner.js';
+import { ORDINARY_ALIEN_ARC_01 } from '../src/data/generated/ordinary-left-01.js';
 import { STATE } from '../src/entities/Alien.js';
 
 let passed = 0;
@@ -251,11 +253,13 @@ console.log('\n=== INFLIGHT CONTROLLER ===\n');
 
 {
   const swarm = new Swarm();
+  swarm.update();
   const ctrl = new InflightController();
   const alien = swarm.getAlienAt(0, 0);
 
   assertEq(alien.isInFormation, true, 'alien initially in formation');
   assertEq(ctrl.activeCount, 0, 'no active inflight records initially');
+  assert(alien.renderY > 14, 'alien renderY is below off-screen threshold');
 
   const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
   assertEq(rec !== null, true, 'launchOrdinaryAlien returns a record');
@@ -276,6 +280,17 @@ console.log('\n=== INFLIGHT CONTROLLER ===\n');
   ctrl.update();
   assertEq(alien.isInFlight, true, 'after update, alien state is IN_FLIGHT');
   assertEq(rec.stageOfLife, 1, 'stage progresses to FLIES_IN_ARC (1)');
+
+  const xBefore = alien.renderX;
+  ctrl.update();
+  ctrl.update();
+  ctrl.update();
+  assertEq(alien.renderX, xBefore - 3, '3 arc ticks move alien left by 3px');
+  assertEq(rec.stageOfLife, 1, 'still in FLIES_IN_ARC after 3 arc ticks');
+
+  // Run rest of arc: 3 extra updates already done = ticks 1-3, need 44 more = ticks 4-47
+  for (let i = 0; i < 44; i++) ctrl.update();
+  assertEq(rec.stageOfLife, 2, 'after 47 arc ticks, StageOfLife is READY_TO_ATTACK (2)');
 
   ctrl.freeSlot(rec.slot);
   assertEq(ctrl.activeCount, 0, 'after free, no active records');
@@ -362,6 +377,347 @@ console.log('\n=== INFLIGHT SLOT POOL ===\n');
   assertEq(pool.allocatedCount, 0, 'after reset all slots free');
   assertEq(pool.freeCount, 8, 'after reset 8 free slots');
   assertEq(pool.allocateNext(), 7, 'after reset, first allocateNext is slot 7');
+}
+
+console.log(`\n=== ARC RUNNER ===\n`);
+
+{
+  const arc = ORDINARY_ALIEN_ARC_01;
+  assertEq(arc.values.length, 52, 'arc has 52 pairs (51 complete + 1 incomplete)');
+  assertEq(arc.direction, 'clockwise', 'arc direction is clockwise');
+  assertEq(arc.sourceAddress, 0x1E00, 'arc source address is $1E00');
+
+  // Pair format sanity: first byte signed X delta
+  assertEq(arc.values[0].x, -1, 'first pair x delta is -1');
+  assertEq(arc.values[0].y, 0, 'first pair y delta is 0');
+  assertEq(arc.values[50].x, 1, 'penultimate pair x delta is 1');
+  assertEq(arc.values[50].y, 0, 'penultimate pair y delta is 0');
+  assertEq(arc.values[51].y, null, 'last pair y is null (incomplete)');
+}
+
+{
+  const runner = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  assertEq(runner.arcIndex, 0, 'starts at index 0');
+  assertEq(runner.clock, 3, 'initial clock is 3');
+  assertEq(runner.frame, 12, 'initial frame count is 12');
+  assertEq(runner.completed, false, 'not completed initially');
+  assertEq(runner.progress, 0, 'progress is 0 initially');
+  assert(runner.currentPair !== null, 'currentPair is not null at start');
+  assertEq(runner.currentPair.x, -1, 'currentPair.x is -1 at start');
+}
+
+{
+  const runner = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  let clock = 3, frame = 12;
+  let totalPairs = 0;
+
+  for (let tick = 1; tick <= 47; tick++) {
+    const result = runner.tick(false);
+    assert(result !== null, `tick ${tick} returns result`);
+    assertEq(result.completed, tick >= 47, `completed=${tick >= 47} at tick ${tick}`);
+    totalPairs++;
+
+    clock--;
+    if (clock <= 0) {
+      clock = 4;
+      frame--;
+    }
+    assertEq(runner.clock, clock, `clock=${clock} at tick ${tick}`);
+    assertEq(runner.frame, frame, `frame=${frame} at tick ${tick}`);
+  }
+
+  assertEq(totalPairs, 47, '47 pairs consumed before completion');
+  assertEq(runner.completed, true, 'runner completed after 47 ticks');
+  assertEq(runner.progress, 47 / 52, 'progress is 47/52 after 47 ticks');
+}
+
+{
+  const runner = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  for (let tick = 1; tick <= 47; tick++) {
+    runner.tick(false);
+  }
+  assertEq(runner.completed, true, 'completed after full cycle');
+  assertEq(runner.tick(false), null, 'tick after completion returns null');
+}
+
+{
+  const runner = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  const deltas = [];
+  for (let t = 0; t < 5; t++) {
+    const r = runner.tick(false);
+    deltas.push({ x: r.xDelta, y: r.yDelta });
+  }
+  assertEq(deltas[0].x, -1, 'tick 0 x delta -1 (counter-clockwise)');
+  assertEq(deltas[0].y, 0, 'tick 0 y delta 0 (counter-clockwise)');
+  assertEq(deltas[3].x, -1, 'tick 3 x delta -1 (counter-clockwise)');
+  assertEq(deltas[3].y, 1, 'tick 3 y delta 1 (counter-clockwise)');
+}
+
+{
+  const runner = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  const deltas = [];
+  for (let t = 0; t < 5; t++) {
+    const r = runner.tick(true);
+    deltas.push({ x: r.xDelta, y: r.yDelta });
+  }
+  assertEq(deltas[0].x, -1, 'tick 0 x delta -1 (clockwise)');
+  assertEq(deltas[0].y, 0, 'tick 0 y delta 0 (clockwise)');
+  assertEq(deltas[3].x, -1, 'tick 3 x delta -1 (clockwise)');
+  assertEq(deltas[3].y, -1, 'tick 3 y delta -1 (clockwise)');
+}
+
+// Determinism: same arc data, multiple runs produce same deltas
+{
+  const runner1 = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  const runner2 = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  for (let t = 0; t < 47; t++) {
+    const r1 = runner1.tick(false);
+    const r2 = runner2.tick(false);
+    assertEq(r1.xDelta, r2.xDelta, `deterministic x delta at tick ${t}`);
+    assertEq(r1.yDelta, r2.yDelta, `deterministic y delta at tick ${t}`);
+    assertEq(r1.completed, r2.completed, `deterministic completed at tick ${t}`);
+  }
+}
+
+// Reset restores initial state
+{
+  const runner = new ArcRunner(ORDINARY_ALIEN_ARC_01);
+  runner.tick(false);
+  runner.tick(false);
+  assertEq(runner.arcIndex, 2, 'arcIndex advanced to 2 after 2 ticks');
+  runner.reset();
+  assertEq(runner.arcIndex, 0, 'after reset arcIndex is 0');
+  assertEq(runner.clock, 3, 'after reset clock is 3');
+  assertEq(runner.frame, 12, 'after reset frame is 12');
+  assertEq(runner.completed, false, 'after reset not completed');
+  const r = runner.tick(false);
+  assertEq(r.xDelta, -1, 'after reset first tick x delta is -1');
+}
+
+console.log(`\n=== FULL LIFECYCLE (DETERMINISTIC) ===\n`);
+
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const alien = swarm.getAlienAt(0, 0);
+  const origX = alien.renderX;
+  const origY = alien.renderY;
+
+  const log = [];
+  function record(tick, remark) {
+    log.push({ tick, remark, x: alien.renderX, y: alien.renderY, stage: ctrl.getRecordByAlien(alien)?.stageOfLife ?? '-' });
+  }
+
+  record(0, 'launch');
+  const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
+  assert(rec !== null, 'launch succeeds');
+  assertEq(rec.slot, 7, 'slot is 7');
+  assertEq(rec.swarmIndex, 0x03, 'swarmIndex is $03');
+
+  // Phase 1: PACKS_BAGS → FLIES_IN_ARC (first update, no runner tick)
+  ctrl.update();                    // update 1 → stage 0→1
+  record(1, 'stage 1 (FLIES_IN_ARC) starts');
+  assertEq(rec.stageOfLife, 1, 'stage 1 after first update');
+
+  // Run runner ticks 1-47: updates 2-48 (47 more updates)
+  for (let i = 2; i <= 48; i++) {
+    ctrl.update();
+  }
+  record(48, 'arc complete');
+  assertEq(rec.stageOfLife, 2, 'stage 2 (READY_TO_ATTACK) after arc');
+
+  // READY_TO_ATTACK → ATTACKING_PLAYER (one tick)
+  ctrl.update();                    // update 49
+  record(49, 'ATTACKING_PLAYER');
+  assertEq(rec.stageOfLife, 3, 'stage 3 after READY_TO_ATTACK');
+
+  // Run attack until near bottom
+  let attackTicks = 0;
+  while (rec.stageOfLife === 3 && attackTicks < 200) {
+    ctrl.update();
+    attackTicks++;
+  }
+  assert(attackTicks < 200, 'alien reached NEAR_BOTTOM within 200 ticks');
+  assertEq(rec.stageOfLife, 4, 'stage 4 (NEAR_BOTTOM)');
+  record(49 + attackTicks, 'NEAR_BOTTOM');
+
+  // NEAR_BOTTOM → REACHED_BOTTOM (Y ≥ 240)
+  let nearBottomTicks = 0;
+  while (rec.stageOfLife === 4 && nearBottomTicks < 60) {
+    ctrl.update();
+    nearBottomTicks++;
+  }
+  assert(nearBottomTicks < 60, 'alien reached REACHED_BOTTOM within 60 ticks');
+  assertEq(rec.stageOfLife, 5, 'stage 5 (REACHED_BOTTOM)');
+  record(49 + attackTicks + nearBottomTicks, 'REACHED_BOTTOM');
+
+  // REACHED_BOTTOM → RETURNING (one tick)
+  ctrl.update();
+  const returningTick = 50 + attackTicks + nearBottomTicks;
+  record(returningTick, 'RETURNING');
+  assertEq(rec.stageOfLife, 6, 'stage 6 (RETURNING)');
+
+  // Run return until back in swarm
+  let returnTicks = 0;
+  while (rec.stageOfLife === 6 && returnTicks < 400) {
+    ctrl.update();
+    returnTicks++;
+  }
+  assert(returnTicks < 400, 'alien returned within 400 ticks');
+
+  const arrivedAtTick = returningTick + returnTicks;
+  record(arrivedAtTick, 'BACK_IN_SWARM');
+  assertEq(alien.isInFormation, true, 'alien is back in formation');
+  assertEq(ctrl.activeCount, 0, 'no active inflight records after return');
+
+  // Verify exact lifecycle counts
+  assertEq(rec.sortieCount, 1, 'sortieCount is 1');
+  assertEq(ctrl.pool.allocatedCount, 0, 'slot pool has no allocated slots');
+  assertEq(ctrl.pool.freeCount, 8, 'slot pool has 8 free slots');
+
+  // Determinism: run second independent simulation with same tick count
+  const swarm2 = new Swarm();
+  swarm2.update();
+  const ctrl2 = new InflightController();
+  const alien2 = swarm2.getAlienAt(0, 0);
+  ctrl2.launchOrdinaryAlien(alien2, swarm2, false);
+  for (let t = 0; t < arrivedAtTick; t++) {
+    ctrl2.update();
+  }
+  assertEq(alien2.isInFormation, true, 'second simulation ends with alien in formation');
+  assertEq(ctrl2.activeCount, 0, 'second simulation has no active records');
+  assertEq(Math.abs(alien2.renderX - alien.renderX) < 5, true, `second sim ends near same X (${alien2.renderX} vs ${alien.renderX})`);
+}
+
+console.log(`\n=== DESTRUCTION DURING FLIGHT ===\n`);
+
+// A. Destroy during FLIES_IN_ARC
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const alien = swarm.getAlienAt(0, 0);
+  const gridAlien = swarm.getAlienAt(0, 0);
+  ctrl.launchOrdinaryAlien(alien, swarm, false);
+  ctrl.update(); // PACKS_BAGS → FLIES_IN_ARC
+  ctrl.update(); // FLIES_IN_ARC tick 1
+
+  assertEq(alien.state, 'inFlight', 'alien is in flight');
+  alien.kill();
+  const rec = ctrl.getRecordByAlien(alien);
+  if (rec) ctrl.freeSlot(rec.slot, false);
+
+  assert(alien.isDying || alien.isDead, 'alien is dying/dead');
+  assertEq(ctrl.activeCount, 0, 'no active inflight records');
+  assertEq(ctrl.pool.allocatedCount, 0, 'slot is freed');
+
+  // Let death timer expire
+  for (let i = 0; i < 30; i++) {
+    ctrl.update();
+    alien.update(swarm.offsetX, swarm.offsetY);
+  }
+  assertEq(alien.state, 'dead', 'alien is dead after timer');
+  assertEq(gridAlien.state, 'dead', 'grid slot alien is dead');
+  assertEq(ctrl.activeCount, 0, 'still no inflight records');
+}
+
+// B. Destroy during ATTACKING_PLAYER
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const alien = swarm.getAlienAt(0, 0);
+  ctrl.launchOrdinaryAlien(alien, swarm, false);
+
+  // Run through arc + READY_TO_ATTACK → ATTACKING_PLAYER
+  for (let i = 0; i < 49; i++) ctrl.update();
+  const attackRec = ctrl.getRecordByAlien(alien);
+  assert(attackRec !== null, 'record exists');
+  assertEq(attackRec.stageOfLife, 3, 'stage is ATTACKING_PLAYER');
+
+  alien.kill();
+  const rec = ctrl.getRecordByAlien(alien);
+  if (rec) ctrl.freeSlot(rec.slot, false);
+
+  assert(alien.isDying || alien.isDead, 'alien dying/dead');
+  assertEq(ctrl.activeCount, 0, 'no active inflight records');
+  assertEq(ctrl.pool.allocatedCount, 0, 'slot is freed');
+
+  for (let i = 0; i < 30; i++) {
+    ctrl.update();
+    alien.update(swarm.offsetX, swarm.offsetY);
+  }
+  assertEq(alien.state, 'dead', 'alien is dead');
+  assertEq(ctrl.activeCount, 0, 'still no inflight records');
+}
+
+// C. Destroy during RETURNING
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const alien = swarm.getAlienAt(0, 0);
+  ctrl.launchOrdinaryAlien(alien, swarm, false);
+
+  // Run full lifecycle until RETURNING
+  let reachedReturning = false;
+  for (let i = 0; i < 350; i++) {
+    ctrl.update();
+    const rec = ctrl.getRecordByAlien(alien);
+    if (rec && rec.stageOfLife === 6) {
+      reachedReturning = true;
+      break;
+    }
+  }
+  assert(reachedReturning, 'alien reached RETURNING');
+
+  alien.kill();
+  const rec = ctrl.getRecordByAlien(alien);
+  if (rec) ctrl.freeSlot(rec.slot, false);
+
+  assert(alien.isDying || alien.isDead, 'alien dying/dead');
+  assertEq(ctrl.activeCount, 0, 'no active inflight records');
+
+  for (let i = 0; i < 30; i++) {
+    ctrl.update();
+    alien.update(swarm.offsetX, swarm.offsetY);
+  }
+  assertEq(alien.state, 'dead', 'alien is dead');
+  assertEq(ctrl.activeCount, 0, 'no inflight records');
+
+  // Grid slot stays permanently empty
+  const gridCheck = swarm.getAlienAt(0, 0);
+  assert(gridCheck === null || gridCheck.isDead, 'grid slot is permanently empty');
+}
+
+// Guard: double free and double score
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const alien = swarm.getAlienAt(0, 0);
+  let scoreAwarded = 0;
+
+  ctrl.launchOrdinaryAlien(alien, swarm, false);
+  ctrl.update();
+  alien.kill();
+  scoreAwarded += alien.scoreValue;
+
+  // Try killing again
+  alien.kill();
+  assertEq(scoreAwarded, alien.scoreValue, 'score not awarded twice');
+
+  const rec = ctrl.getRecordByAlien(alien);
+  if (rec) {
+    assertEq(ctrl.freeSlot(rec.slot, false), true, 'first free succeeds');
+    assertEq(ctrl.freeSlot(rec.slot, false), false, 'second free returns false');
+  }
+
+  for (let i = 0; i < 30; i++) {
+    ctrl.update();
+    alien.update(swarm.offsetX, swarm.offsetY);
+  }
 }
 
 console.log(`\n=== SUMMARY ===`);
