@@ -2,6 +2,7 @@ import { CONFIG } from '../src/config.js';
 import { SwarmLayout } from '../src/entities/swarm/SwarmLayout.js';
 import { Alien } from '../src/entities/Alien.js';
 import { Swarm } from '../src/entities/swarm/Swarm.js';
+import { InflightSlotPool } from '../src/inflight/InflightSlotPool.js';
 
 let passed = 0;
 let failed = 0;
@@ -216,6 +217,51 @@ assert(typeof CONFIG.FIXED_STEP_MS === 'number', 'FIXED_STEP_MS is a number');
 assertEq(CONFIG.FIXED_STEP_MS, 1000 / 60, 'FIXED_STEP_MS === 1000/60');
 assertEq(CONFIG.LOGIC_HZ, 60, 'LOGIC_HZ === 60');
 assert(CONFIG.MAX_FRAME_SKIP > 0, 'MAX_FRAME_SKIP > 0');
+
+console.log('\n=== INFLIGHT SLOT POOL ===\n');
+
+{
+  const pool = new InflightSlotPool();
+
+  assertEq(pool.total, 8, 'total slots === 8');
+  assertEq(pool.reserved, 4, 'reserved slots === 4');
+  assertEq(pool.allocatedCount, 0, 'initially no allocated slots');
+  assertEq(pool.freeCount, 8, 'initially 8 free slots');
+
+  assertEq(pool.allocate(0), 0, 'slot 0 can be allocated directly');
+  assertEq(pool.allocate(4), 4, 'slot 4 can be allocated directly');
+  assertEq(pool.allocate(4), null, 'slot 4 cannot be double-allocated');
+
+  const next1 = pool.allocateNext();
+  assertEq(next1, 7, 'allocateNext scans 7→4, returns slot 7');
+
+  const next2 = pool.allocateNext();
+  assertEq(next2, 6, 'allocateNext returns slot 6');
+
+  const next3 = pool.allocateNext();
+  assertEq(next3, 5, 'allocateNext returns slot 5');
+
+  assertEq(pool.allocateNext(), null, 'no free slots when 4-7 all taken');
+
+  assertEq(pool.free(5), true, 'free slot 5 succeeds');
+  assertEq(pool.allocateNext(), 5, 're-allocate slot 5 after free');
+
+  assertEq(pool.free(99), false, 'free invalid index returns false');
+  assertEq(pool.free(1), false, 'free unallocated slot returns false');
+
+  assertEq(pool.isAllocated(4), true, 'slot 4 is allocated');
+  assertEq(pool.isAllocated(2), false, 'slot 2 is not allocated');
+
+  assertEq(pool.canAllocate(0), false, 'slot 0 is reserved, cannot allocate');
+  assertEq(pool.canAllocate(3), false, 'slot 3 is reserved, cannot allocate');
+  assertEq(pool.canAllocate(4), false, 'slot 4 is taken, cannot allocate');
+  assertEq(pool.canAllocate(7), false, 'slot 7 is taken, cannot allocate');
+
+  pool.reset();
+  assertEq(pool.allocatedCount, 0, 'after reset all slots free');
+  assertEq(pool.freeCount, 8, 'after reset 8 free slots');
+  assertEq(pool.allocateNext(), 7, 'after reset, first allocateNext is slot 7');
+}
 
 console.log(`\n=== SUMMARY ===`);
 console.log(`Passed: ${passed}`);
