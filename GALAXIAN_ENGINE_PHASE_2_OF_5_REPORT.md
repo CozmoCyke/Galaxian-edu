@@ -1,142 +1,130 @@
-# Galaxian Engine — Phase 2/5 Report
+# Phase 2/5 — Single Ordinary Inflight Alien
 
-## Summary of Phase 0/1
+**Verdict: COMPLETE**
 
-- **Game loop**: `requestAnimationFrame` + fixed 60 Hz accumulator (`FIXED_STEP_MS = 1000/60`), decoupled update/render, max 5 frame skip limit.
-- **State machine**: `Boot → Play → PlayerDying → GameOver → Play (loop)` with `enter/update/exit` hooks.
-- **Formation**: Authentic 46-alien layout from ASM `ALIEN_SWARM_FLAGS` (`$4100`): 2 flagships, 6 red, 8 purple, 30 blue (10×3 rows). Each alien has stable `swarmIndex`, `row`, `col`, state machine (`inFormation|dying|dead`), persistent grid slots.
-- **Swarm movement**: Group offset (`Swarm.offsetX/direction`), individual positions = `swarmOffset + localGridPosition`.
-- **Player**: move/shoot/hit/recover, single active bullet, boundary clamping.
-- **Collision**: AABB between `PlayerBullet` active and aliens in formation; persistent holes after kill.
-- **HUD**: score (6-digit), hi-score, lives (ship icons, max 4), level (red bars).
-- **Debug overlay**: `F2` toggle, shows state, tick, FPS, swarm dir/offset/alive counts, player coords/bullet/score, per-alien labels.
-- **Tests**: 64/64 unit tests pass.
-- **Browser validation**: 0 console errors, 0 failed requests, canvas 288×240, game loads offline, all interactions verified.
+The alien performs the full cycle: formation → arc ASM → dive → bottom exit → progressive return → same grid slot.
 
-## Remote & Branch Strategy
+## Test Results
 
-| Branch | Remote | History | Content |
-|--------|--------|---------|---------|
-| `main` | `origin/main` | 1 commit (orphan) | 40 safe files only |
-| `master` | (local only) | 4 commits | Full history incl. provenance-uncertain assets |
+| Metric | Value |
+|---|---|
+| Tests before phase 2 | 64 |
+| Phase 2 tests (swarmIndex + pool + controller + ArcRunner + lifecycle + destruction) | 470 |
+| **Total tests** | **534** |
+| Tests passing | **534/534** |
+| Tests failing | **0** |
 
-### What was pushed (safe)
-- `galaxian_engine/src/`, `galaxian_engine/tests/`, `galaxian_engine/docs/`, `galaxian_engine/index.html`, `galaxian_engine/package.json`, `galaxian_engine/run_local.ps1`, `galaxian_engine/README.md`, `galaxian_engine/.eslintrc.json`
-- `reports/` (3 files)
-- `tools/` (4 files)
-- Root: `.gitignore`, `README.md`, `start-galaxian-edu.cmd`, `start-galaxian-edu.ps1`,
-  `GALAXIAN_BASIC_AS_FOUNDATION_AUDIT.md`, `GALAXIAN_ARCHITECTURE_ROADMAP.md`,
-  `GALAXIAN_ENGINE_PHASE_0_1_REPORT.md`
+## Arc Table
 
-### What was withheld (provenance uncertain)
-- `app/` (34 files) — Construct 2 export, third-party tool output
-- `org/` (34 files) — Construct 2 project backup
-- `project/` (10 files) — ROM-derived sprites/sounds, third-party asm disassembly
-- `galaxian_basic/` (25 files) — Biniek's 2010 game, no explicit license
-- `galaxian.asm` (root) — duplicate of `project/galaxian.asm`
-- `galaxian_engine/assets/` (9 files) — copies from `project/`
+| Field | Value |
+|---|---|
+| Address | `$1E00` |
+| Raw size (file) | 103 bytes |
+| Exact size consumed | **94 bytes** (47 pairs) |
+| First byte consumed | Offset 0 |
+| Last byte consumed | Offset 93 ($5D) |
+| 103rd byte role | Unconsumed padding — allocated but not read by ordinary lifecycle. Termination is timer-driven (`TempCounter2`), not sentinel-based. |
+| Source SHA-256 | `3FAB84A3F17C56703473A4142AFE5DED3FF69546E62CB0469FFEDCE59ACE2230` |
 
-All withheld files remain **intact on disk** and in `master` branch history.
-To restore local tracking: `git rm --cached` entries in `.gitignore`.
+## Debug Alien (F3) — Deterministic
 
-### Remote state
-- **Origin**: `https://github.com/CozmoCyke/Galaxian-edu.git`
-- **Pushed**: `main` (commit `979ec56`), tag `phase-0.1-complete`
-- **Not pushed**: `master` branch (kept local with full history)
+| Field | Value |
+|---|---|
+| Alien | Row 0, Col 0 (blue) |
+| SwarmIndex | `$03` |
+| Slot | 7 |
+| Clockwise (F3) | 0 (left arc) |
+| Clockwise (Shift+F3) | 1 (right arc) |
+| Random | Eliminated — `Math.random()` removed |
 
-## Phase 2/5 — Next Steps
+## Lifecycle Sequence
 
-### Attack scheduling
-- Alien dive-bomb state: transition `inFormation → diving → dying → dead`
-- Dive selection logic (which alien, when)
-- Attack arc — sinusoidal/parabolic trajectory toward player
-- Bullet firing from diving aliens
+| StageOfLife | Name | Transition Condition | ASM Address |
+|---|---:|---|---|
+| 0 | PACKS_BAGS | → 1 on first `update()` | `$0D35` |
+| 1 | FLIES_IN_ARC | → 2 after 47 ticks OR → 5 if Y+7 < 14 | `$0D71` |
+| 2 | READY_TO_ATTACK | → 3 after 1 tick (params init) | `$0DD1` |
+| 3 | ATTACKING_PLAYER | → 4 when Y ≥ 200 | `$0FAF` |
+| 4 | NEAR_BOTTOM | → 5 when Y ≥ 240 | `$0FFB` |
+| 5 | REACHED_BOTTOM | → 6 after sortieCount++ | `$0E99` |
+| 6 | RETURNING | → 7 when distance to target = 0 | `$0F07` |
+| 7 | BACK_IN_SWARM | Record freed, alien in formation | `$0F2B` |
 
-### Inflight aliens
-- Independent alien entities while diving (separate from swarm grid)
-- Collision detection between player bullets and diving aliens
-- Diving alien collision with player
+### Key Measurements
 
-### Arcade tables
-- Convert more ASM lookup tables from `galaxian.asm`:
-  - Alien movement speed/direction tables
-  - Attack frequency / group size tables
-  - Score values per enemy type
+| Event | Ticks (approx) |
+|---|---|
+| Arc duration | 47 |
+| Dive (ATTACKING_PLAYER + NEAR_BOTTOM) | ~190–210 |
+| Return (RETURNING) | ~120–200 |
+| Total cycle | ~360–460 |
+| SortieCount | **1** (exactly one bottom pass) |
+| Return to grid slot | Exact — `renderX`/`renderY` match computed swarm position |
+| Return target | **Dynamic** — recalculated every tick from `swarm.offsetX/Y` + grid formula |
 
-### Enemy bullets
-- Bullet spawn from diving aliens
-- Player-diving alien collision → player death
+## Stage Transitions — ASM Fidelity
 
-### Sound
-- Integrate Web Audio API for sound effects
-- Hook sounds to game events (shoot, hit, death, extra life, etc.)
-- Sound assets in `galaxian_engine/assets/snd/` (not yet loaded)
+| Transition | ASM Match | Notes |
+|---|---|---|
+| READY_TO_ATTACK → ATTACKING_PLAYER | Approximate | In ASM, `$0DD1` computes player-relative flight path via `$0E1C` (zigzag). Our version uses linear descent (Y += 1/tick, X += 1/tick). Targeting policy is isolated as inline code, not a pluggable module. |
+| Off-screen escape (Y+7 < 14) | Exact | Matches `$0D8B`–`$0D8F` logic. |
+| REACHED_BOTTOM → RETURNING | Exact | `sortieCount` incremented, target computed via `computeSwarmTargetX/Y` which mirrors `SET_INFLIGHT_ALIEN_START_POSITION` (`$1147`). |
+| RETURNING target recalculation | Exact | Computed every tick using `IndexInSwarm` → row/col → `$7C − row×6`, `swarmOffsetY + col×16 + 7`. Mirrors ASM `$1147`. |
+| RETURNING distance check | Exact | Compares X difference only (ASM `$0F14`: `sub b`). Tolerance 25px for rotation, 0px for arrival. |
 
-### Asset loading
-- Load sprite PNGs into render pipeline (procedural rendering currently in use)
-- Asset manifest system from `AssetLoader.js`
+## Destruction Tests
 
-### Recommended working branch
-```powershell
-git checkout main    # clean, pushable history
-# or
-git checkout master  # full local history if you need the ASM reference
-```
+| Scenario | Result |
+|---|---|
+| A. Destroy during FLIES_IN_ARC | Grid slot dead permanently, slot freed, no return |
+| B. Destroy during ATTACKING_PLAYER | Same |
+| C. Destroy during RETURNING | Same |
+| Guard: double score | Score awarded once |
+| Guard: double free | Second free returns `false` |
+| Guard: late return | No transition after death |
 
-## Verification
+## Browser Validation
 
-```powershell
-cd galaxian_engine
-node tests/engine_tests.mjs       # 64/64 pass
-start http://localhost:8000        # (run_local.ps1 first)
-```
+| Check | Result |
+|---|---|
+| Console errors | None |
+| Import errors | None |
+| 404 | None |
+| Offline operation | OK |
+| F3 deterministic | Shift toggles clockwise |
+| F2 overlay | Shows all required fields |
+| Return line drawn | Yes, during RETURNING |
 
-## Tag
+## Report Files
 
-```powershell
-git tag -l "phase-*"
-# → phase-0.1-complete  (979ec56 on origin/main)
-```
+- `GALAXIAN_ENGINE_PHASE_2_OF_5_REPORT.md` — this file
+- `docs/INFLIGHT_ALIEN_LIFECYCLE.md` — updated with arc table analysis
+- `src/data/generated/ordinary-left-01.js` — arc table data with SHA-256 provenance
+- `tools/extract_arc_tables.mjs` — deterministic arc extraction tool
+- `src/inflight/ArcRunner.js` — deterministic arc pair interpreter
+- `src/inflight/InflightController.js` — full lifecycle controller
+- `src/states/PlayState.js` — F3 integration
+- `src/debug/DebugOverlay.js` — comprehensive debug panel
 
-## Private Git Bundle — Full Local History Backup
+## Arc Data Publication Review
 
-### Status
-```
-PRIVATE GIT BUNDLE VERIFIED — FULL LOCAL HISTORY RECOVERABLE
-```
+| Field | Value |
+|---|---|
+| File | `src/data/generated/ordinary-left-01.js` |
+| Verdict | **ACCEPTED** |
+| Content | 52 numeric x/y delta pairs (94 bytes), derived coordinate data only |
+| ASM source | Not included — cited as provenance only |
+| Binary assets | None |
+| Private paths | None |
+| Regeneration | Documented: `node tools/extract_arc_tables.mjs --source <asm-path> --arc ordinary-left-01` |
+| Disclaimer | "local ASM disassembly (NOT included in distribution)" |
 
-### Bundle file
-- **Path**: `C:\dev\git-bundles\galaxian-edu\galaxian-edu-full-20260627-170350.bundle`
-- **Size**: 1,362,207 bytes (1.30 MB)
-- **SHA-256**: `738D41CCB583B1E5D945192AC1A2AD2AD9A43602C765C37AD9FE965516B7A6A4`
-- **Manifest**: `C:\dev\git-bundles\galaxian-edu\galaxian-edu-full-20260627-170350.bundle.manifest.txt`
-- **Backup dir**: `C:\dev\git-bundles\galaxian-edu\` (outside repo)
+## Next (Phase 3/5)
 
-### Contents
-| Ref | Included |
-|-----|----------|
-| `refs/heads/main` | ✅ `caffa3a` |
-| `refs/heads/master` | ✅ `9edeb8e` |
-| `refs/remotes/origin/main` | ✅ `caffa3a` |
-| `refs/tags/phase-0.1-complete` | ✅ `233854f` (annotated tag → `caffa3a`) |
-| Commits | 6 total (3 main + 4 master, with overlap at `caffa3a`/`979ec56`) |
-
-### Verification results
-- **`git bundle list-heads`**: all refs present and correct
-- **`git clone` from bundle**: SUCCESS — 6 commits, 2 branches, 1 tag all restored
-- **`git fsck --full`**: 0 errors, no corruption
-- **`master` checkout**: all 4 commits + provenance-uncertain files (`galaxian_basic/`, `project/`, `galaxian.asm`, `app/`, `org/`) fully accessible
-
-### Privacy
-- Bundle stored **outside** the repo (`C:\dev\git-bundles\galaxian-edu\`) — not tracked, not pushed
-- `*.bundle` and `*.bundle.manifest.txt` added to `.gitignore` (committed on `main`)
-- Restore test clone deleted after verification
-- Bundle is **private archival backup only** — do not publish or share
-
-### Restore instructions (if needed)
-```powershell
-git clone C:\dev\git-bundles\galaxian-edu\galaxian-edu-full-20260627-170350.bundle C:\dev\galaxian-edu-restored
-cd C:\dev\galaxian-edu-restored
-git checkout master   # full history with all assets
-git checkout main     # clean public subset
-```
+- Scheduler: automatic alien selection based on ASM rules
+- Multiple simultaneous inflight aliens
+- Enemy bullet firing
+- SortieCount > 1 with aggressive behaviour
+- Loop-the-loop taunt for aggressive aliens
+- Player-relative targeting
+- Dynamic `SortieCount` cap based on remaining aliens
