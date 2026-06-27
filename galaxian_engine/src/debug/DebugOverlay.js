@@ -54,6 +54,42 @@ export class DebugOverlay {
         x1, y
       );
 
+      if (ps.shockCtrl && ps.shockCtrl.isActive) {
+        y += 9;
+        ctx.fillStyle = '#FF0000';
+        ctx.fillText(
+          `SHOCK: ACTIVE  counter=${ps.shockCtrl.counter}/${ps.shockCtrl.duration}`,
+          x1, y
+        );
+      }
+
+      if (ps.flagshipScheduler) {
+        y += 9;
+        const fs = ps.flagshipScheduler;
+        ctx.fillStyle = '#FF6600';
+        ctx.fillText(
+          `FSHIP: ${fs.enabled ? 'ON' : 'OFF'}  side=${fs.side}  ` +
+          `master1=$${fs.counters.master1.toString(16).toUpperCase()}  ` +
+          `master2=$${fs.counters.master2.toString(16).toUpperCase()}  ` +
+          `secEn=${fs.counters.secondaryEnabled ? 1 : 0}  ` +
+          `sec=$${fs.counters.secondary.toString(16).toUpperCase()}  ` +
+          `canAtk=${fs.counters.canAttack ? 1 : 0}  ` +
+          `lastRef=${fs.lastRefusalReason}`,
+          x1, y
+        );
+        if (fs.activeGroup) {
+          y += 9;
+          const grp = fs.activeGroup;
+          ctx.fillText(
+            `GRP: id=${grp.groupId}  stage=${grp.stage}  ` +
+            `side=${grp.side}  launchTick=${grp.launchTick}  ` +
+            `act=${grp.activeMemberCount}  origEsc=${grp.originalEscortCount}  ` +
+            `livEsc=${grp.livingEscortCount}  compl=${grp.completed}`,
+            x1, y
+          );
+        }
+      }
+
       if (ps.scheduler) {
         y += 9;
         const sched = ps.scheduler;

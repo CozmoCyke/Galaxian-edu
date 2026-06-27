@@ -67,6 +67,10 @@ export class SwarmLayout {
     return this.aliens.filter(a => a.col === col && a.alive && !a.isDead);
   }
 
+  hasFlagships() {
+    return this.aliens.some(a => a.isFlagship && a.alive && !a.isDead);
+  }
+
   [Symbol.iterator]() {
     return this.aliens.values();
   }

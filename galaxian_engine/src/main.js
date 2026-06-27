@@ -21,6 +21,15 @@ game.input._onKeyDown = (function(orig) {
   };
 })(game.input._onKeyDown);
 
+const isTestMode = window.location.search.includes('test=1');
+
 window.addEventListener('load', () => {
   game.start();
+  if (isTestMode) {
+    import('./test/testAdapter.js').then(m => {
+      m.initTestAdapter(game);
+      console.log('[TEST] __galaxianTest API ready');
+      window.dispatchEvent(new CustomEvent('galaxianTestReady'));
+    });
+  }
 });

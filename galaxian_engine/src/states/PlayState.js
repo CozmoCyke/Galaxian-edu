@@ -5,6 +5,9 @@ import { PlayerBullet } from '../entities/PlayerBullet.js';
 import { Swarm } from '../entities/swarm/Swarm.js';
 import { InflightController } from '../inflight/InflightController.js';
 import { OrdinaryAttackScheduler } from '../attacks/OrdinaryAttackScheduler.js';
+import { FlagshipAttackScheduler } from '../flagship/FlagshipAttackScheduler.js';
+import { ShockController } from '../flagship/ShockController.js';
+import { FlagshipScoreCalculator } from '../flagship/FlagshipScoreCalculator.js';
 
 export class PlayState {
 
@@ -18,11 +21,14 @@ export class PlayState {
   }
 
   enter() {
+    this.game.playState = this;
     this.player = new Player(this.game);
     this.playerBullet = new PlayerBullet(this.game);
     this.swarm = new Swarm();
     this.inflightCtrl = new InflightController();
     this.scheduler = new OrdinaryAttackScheduler();
+    this.flagshipScheduler = new FlagshipAttackScheduler();
+    this.shockCtrl = new ShockController();
     this._gameState = 'playing';
   }
 
@@ -30,6 +36,39 @@ export class PlayState {
     const alien = this.swarm.getAlienAt(0, 0);
     if (!alien) return;
     this.inflightCtrl.launchOrdinaryAlien(alien, this.swarm, clockwise);
+  }
+
+  _debugLaunchFlagship() {
+    // Force counters to ready state so the scheduler will fire
+    const counters = this.flagshipScheduler.counters;
+    counters.master1 = 1;
+    counters.master2 = 1;
+    counters.secondaryEnabled = true;
+    counters.secondary = 0;
+    counters.canAttack = true;
+
+    this.flagshipScheduler.setEnabled(true);
+    this.flagshipScheduler.update(this.swarm, this.inflightCtrl, {
+      gameState: 'playing',
+      difficultyBase: this.scheduler.baseDifficulty,
+      difficultyExtra: this.scheduler.extraDifficulty,
+      attackSide: 'left',
+      isFlagshipHit: false
+    });
+
+    // Advance a few ticks to let the launch complete
+    for (let i = 0; i < 10; i++) {
+      this.inflightCtrl.update();
+      this.flagshipScheduler.update(this.swarm, this.inflightCtrl, {
+        gameState: 'playing',
+        difficultyBase: this.scheduler.baseDifficulty,
+        difficultyExtra: this.scheduler.extraDifficulty,
+        attackSide: 'left',
+        isFlagshipHit: false
+      });
+    }
+
+    this.flagshipScheduler.setEnabled(false);
   }
 
   exit() {
@@ -52,6 +91,30 @@ export class PlayState {
     this.swarm.update();
     this.inflightCtrl.update();
 
+    // Group lifecycle tracking (always, independent of scheduler enabled state)
+    this.flagshipScheduler.updateGroupLifecycle(this.inflightCtrl);
+
+    // Handle kill events (score + shock trigger)
+    const killEvent = this.flagshipScheduler.lastKillEvent;
+    if (killEvent) {
+      if (killEvent.type === 'flagship_killed' || killEvent.type === 'escort_killed') {
+        this.shockCtrl.trigger();
+      }
+      this.flagshipScheduler.clearEvents();
+    }
+
+    // Handle completed group (score for flagship kill)
+    const completedGroup = this.flagshipScheduler.lastCompletedGroup;
+    if (completedGroup && completedGroup.flagshipDead) {
+      const escortsDestroyedBeforeFlagship = completedGroup.originalEscortCount - completedGroup.livingEscortCount;
+      const scoreResult = FlagshipScoreCalculator.calculate({
+        originalEscortCount: completedGroup.originalEscortCount,
+        livingEscortCount: completedGroup.livingEscortCount,
+        escortsDestroyedBeforeFlagship
+      });
+      this.game.score += scoreResult.points;
+    }
+
     if (this.game.input.f3Pressed) {
       this._launchDebugAlien(this.game.input.shiftKey);
     }
@@ -68,9 +131,31 @@ export class PlayState {
       }
     }
 
+    if (this.game.input.wasPressed('F6')) {
+      if (this.game.input.ctrlKey) {
+        this._debugLaunchFlagship();
+      } else {
+        this.flagshipScheduler.setEnabled(!this.flagshipScheduler.enabled);
+      }
+    }
+
     if (this.scheduler.enabled) {
       this.scheduler.update(this.swarm, this.inflightCtrl, this._getGameState());
     }
+
+    // Flagship attack scheduler (runs after ordinary, matching ASM cadence)
+    if (this.flagshipScheduler.enabled) {
+      this.flagshipScheduler.update(this.swarm, this.inflightCtrl, {
+        gameState: this._getGameState(),
+        difficultyBase: this.scheduler.baseDifficulty,
+        difficultyExtra: this.scheduler.extraDifficulty,
+        attackSide: this.scheduler.side,
+        isFlagshipHit: this.shockCtrl.isActive
+      });
+    }
+
+    // Shock state update
+    this.shockCtrl.update({ noInflightAliens: !this.inflightCtrl.isAnyActive });
   }
 
   _fireBullet() {
