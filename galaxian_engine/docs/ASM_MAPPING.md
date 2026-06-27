@@ -106,6 +106,32 @@ This document maps each concept from the original Galaxian Z80 disassembly
 | Script 3 = Gameplay P1 | N/A | `PlayState` | ✅ Implemented |
 | Script 4 = Gameplay P2 | N/A | (two-player stub) | 🔲 Future |
 
+## Ordinary Attack Scheduler (Phase 3)
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| `CHECK_IF_ALIEN_CAN_ATTACK` | `$1515` | `AlienAttackCounters.tick()` | ✅ Implemented |
+| `ALIEN_ATTACK_MASTER_COUNTER` | `$424A` | `AlienAttackCounters.counters[0]` | ✅ Implemented |
+| `ALIEN_ATTACK_SECONDARY_COUNTERS` | `$424B–$4259` (15 bytes) | `AlienAttackCounters.counters[1..15]` | ✅ Implemented |
+| Counter default values | `$15E3` (16-byte table) | `DEFAULT_VALUES` array | ✅ Implemented |
+| `HANDLE_SINGLE_ALIEN_ATTACK` | `$1344` | `OrdinaryAttackScheduler.update()` | ✅ Implemented |
+| `SET_ALIEN_ATTACK_FLANK` | `$13E1` | `_toggleFlank()` | ✅ Partial (alternation vs position-based) |
+| `ALIENS_ATTACK_FROM_RIGHT_FLANK` | `$4215` | `OrdinaryAttackScheduler._side` | ✅ Implemented |
+| `GENERATE_RANDOM_NUMBER` | `$003C` | `GalaxianRng.nextByte()` | ✅ Implemented |
+| `RAND_NUMBER` state | `$401E` | `GalaxianRng._state` | ✅ Implemented |
+| `HANDLE_LEVEL_DIFFICULTY` | `$14F3` | `setBaseDifficulty()` / `setExtraDifficulty()` | ✅ Implemented |
+| `DIFFICULTY_EXTRA_VALUE` | `$421A` | `OrdinaryAttackScheduler._extraDifficulty` | ✅ Implemented |
+| `DIFFICULTY_BASE_VALUE` | `$421B` | `OrdinaryAttackScheduler._baseDifficulty` | ✅ Implemented |
+| Max inflight formula | `$1352–$135E` | `_computeMaxInflight()` | ✅ Implemented |
+| Column scan (left flank) | `$137B–$1389` | `OrdinaryAlienSelector` | ✅ Implemented |
+| Column scan (right flank) | `$13AB–$13BA` | Same | ✅ Implemented |
+| Row scan (has flagships) | `$138F–$1394` | `_findAlienInColumn()` | ✅ Implemented |
+| Row scan (no flagships) | `$13BD–$13C2` | Same | ✅ Implemented |
+| `CAN_ALIEN_ATTACK` flag | `$4228` | `AlienAttackCounters._canAttack` | ✅ Implemented |
+| `HAVE_ALIENS_IN_TOP_ROW` | `$41EF` | `OrdinaryAlienSelector.hasFlagships()` | ✅ Implemented |
+| `ALIEN_IN_COLUMN_FLAGS` | `$41F0–$41FF` | `buildColumnFlags()` | ✅ Implemented |
+| `HAVE_ALIENS_IN_ROW_FLAGS` | `$41E8–$41ED` | `buildRowFlags()` | ✅ Implicit |
+
 ---
 
 ## Legend
