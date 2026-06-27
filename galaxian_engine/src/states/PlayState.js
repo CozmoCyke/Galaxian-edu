@@ -4,6 +4,7 @@ import { Player } from '../entities/Player.js';
 import { PlayerBullet } from '../entities/PlayerBullet.js';
 import { Swarm } from '../entities/swarm/Swarm.js';
 import { InflightController } from '../inflight/InflightController.js';
+import { OrdinaryAttackScheduler } from '../attacks/OrdinaryAttackScheduler.js';
 
 export class PlayState {
 
@@ -21,10 +22,8 @@ export class PlayState {
     this.playerBullet = new PlayerBullet(this.game);
     this.swarm = new Swarm();
     this.inflightCtrl = new InflightController();
-
-    this.game.score = 0;
-    this.game.lives = 3;
-    this.game.level = 1;
+    this.scheduler = new OrdinaryAttackScheduler();
+    this._gameState = 'playing';
   }
 
   _launchDebugAlien(clockwise) {
@@ -35,6 +34,10 @@ export class PlayState {
 
   exit() {
     this.game.playState = null;
+  }
+
+  _getGameState() {
+    return this._gameState;
   }
 
   update() {
@@ -51,6 +54,22 @@ export class PlayState {
 
     if (this.game.input.f3Pressed) {
       this._launchDebugAlien(this.game.input.shiftKey);
+    }
+
+    if (this.game.input.wasPressed('F4')) {
+      this.scheduler.setEnabled(!this.scheduler.enabled);
+    }
+
+    if (this.game.input.wasPressed('F5')) {
+      if (this.game.input.shiftKey) {
+        this.scheduler.setExtraDifficulty(0);
+      } else {
+        this.scheduler.setExtraDifficulty(Math.min(this.scheduler.extraDifficulty + 1, 7));
+      }
+    }
+
+    if (this.scheduler.enabled) {
+      this.scheduler.update(this.swarm, this.inflightCtrl, this._getGameState());
     }
   }
 

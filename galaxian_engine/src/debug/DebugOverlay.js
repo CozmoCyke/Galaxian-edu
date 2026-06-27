@@ -26,7 +26,7 @@ export class DebugOverlay {
     const state = this.game.sm.currentName;
     const ps = this.game.playState;
 
-    const panelH = 125;
+    const panelH = 165;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(0, CONFIG.CANVAS_HEIGHT - panelH, CONFIG.CANVAS_WIDTH, panelH);
 
@@ -34,7 +34,6 @@ export class DebugOverlay {
     ctx.font = '8px monospace';
     let y = CONFIG.CANVAS_HEIGHT - panelH + 6;
     const x1 = 4;
-    const x2 = 170;
 
     ctx.fillText(`STATE: ${state}  TICK: ${this.game.logicTick}  FPS: ${this.game.measuredFps}`, x1, y);
 
@@ -54,6 +53,39 @@ export class DebugOverlay {
         `bullet=${ps.playerBullet.active}  score=${this.game.score}`,
         x1, y
       );
+
+      if (ps.scheduler) {
+        y += 9;
+        const sched = ps.scheduler;
+        ctx.fillStyle = '#FFFF00';
+        ctx.fillText(
+          `SCHED: ${sched.enabled ? 'ON' : 'OFF'}  side=${sched.side}  ` +
+          `tick=${sched.tickCounter}  baseDiff=${sched.baseDifficulty}  extraDiff=${sched.extraDifficulty}  ` +
+          `RNG=$${sched.rng.getState().toString(16).toUpperCase().padStart(2,'0')}  ` +
+          `lastRef=${sched.lastRefusalReason}  lastSW=$${(sched.lastSwarmIndex >= 0 ? sched.lastSwarmIndex.toString(16).toUpperCase().padStart(2,'0') : '--')}`,
+          x1, y
+        );
+
+        y += 9;
+        const cnt = sched.counters;
+        ctx.fillStyle = '#FFAA00';
+        const maxInf = sched.maxInflight;
+        ctx.fillText(
+          `CTRS: master=${cnt.master}  canAttack=${cnt.canAttack ? 1 : 0}  ` +
+          `b=${cnt.getB(sched.baseDifficulty, sched.extraDifficulty)}  ` +
+          `maxInf=${maxInf}  totalLaunch=${sched.totalLaunches}`,
+          x1, y
+        );
+
+        y += 9;
+        let secStr = '';
+        for (let i = 0; i < 15; i++) {
+          secStr += cnt.counters[i + 1].toString(16).toUpperCase().padStart(2, '0');
+          if (i < 14) secStr += ' ';
+          if ((i + 1) % 5 === 0 && i < 14) secStr += '| ';
+        }
+        ctx.fillText(`SEC: ${secStr}`, x1, y);
+      }
 
       if (ps.inflightCtrl && ps.inflightCtrl.isAnyActive) {
         y += 9;
