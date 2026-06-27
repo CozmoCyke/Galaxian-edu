@@ -7,6 +7,10 @@ import { InflightController } from '../src/inflight/InflightController.js';
 import { ArcRunner } from '../src/inflight/ArcRunner.js';
 import { ORDINARY_ALIEN_ARC_01 } from '../src/data/generated/ordinary-left-01.js';
 import { STATE } from '../src/entities/Alien.js';
+import { GalaxianRng } from '../src/core/GalaxianRng.js';
+import { AlienAttackCounters } from '../src/attacks/AlienAttackCounters.js';
+import { OrdinaryAlienSelector } from '../src/attacks/OrdinaryAlienSelector.js';
+import { OrdinaryAttackScheduler } from '../src/attacks/OrdinaryAttackScheduler.js';
 
 let passed = 0;
 let failed = 0;
@@ -718,6 +722,553 @@ console.log(`\n=== DESTRUCTION DURING FLIGHT ===\n`);
     ctrl.update();
     alien.update(swarm.offsetX, swarm.offsetY);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Phase 3/5 — Ordinary Attack Scheduler
+// ═══════════════════════════════════════════════════════════════
+
+console.log(`\n=== Phase 3 — RNG ===`);
+
+// RNG: sequence determinism from seed 0
+{
+  const rng = new GalaxianRng(0);
+  const expected = [0x01, 0x06, 0x1F, 0x9C, 0x0D, 0x42, 0x4B, 0x78, 0x59, 0xBE];
+  for (let i = 0; i < expected.length; i++) {
+    const val = rng.nextByte();
+    assertEq(val, expected[i], `RNG byte ${i} from seed 0`);
+  }
+}
+
+// RNG: state save/restore and same-seed determinism
+{
+  const rng1 = new GalaxianRng(0xAB);
+  const rng2 = new GalaxianRng(0xAB);
+  const seq1 = [];
+  const seq2 = [];
+  for (let i = 0; i < 10; i++) {
+    seq1.push(rng1.nextByte());
+    seq2.push(rng2.nextByte());
+  }
+  for (let i = 0; i < 10; i++) {
+    assertEq(seq1[i], seq2[i], `RNG same seed byte ${i}`);
+  }
+
+  // State save/restore
+  const rng3 = new GalaxianRng(0xAB);
+  rng3.nextByte(); // 88, state=88
+  const saved = rng3.getState(); // 88
+  const expectedAfterRestore = rng3.nextByte(); // 185, state=185
+  rng3.setState(saved); // state=88
+  assertEq(rng3.nextByte(), expectedAfterRestore, 'RNG: restore yields same value as original second byte');
+}
+
+// RNG: 8-bit boundary
+{
+  const rng = new GalaxianRng(0xFF);
+  const seq = [];
+  for (let i = 0; i < 100; i++) {
+    const v = rng.nextByte();
+    assert(v >= 0 && v <= 255, `RNG byte ${i} in 0..255 range, got ${v}`);
+  }
+}
+
+console.log(`\n=== Phase 3 — Attack Counters ===`);
+
+// Counters: initial values
+{
+  const cnt = new AlienAttackCounters();
+  assertEq(cnt.master, 5, 'initial master = 5');
+  assertEq(cnt.counters.length, 16, '16 total counters');
+  assertEq(cnt.secondary.length, 15, '15 secondary counters');
+  assert(!cnt.canAttack, 'canAttack initially false');
+}
+
+// Counters: master decrements each tick
+{
+  const cnt = new AlienAttackCounters();
+  cnt.tick(2, 0);
+  assertEq(cnt.master, 4, 'master decremented to 4');
+  assert(!cnt.canAttack, 'canAttack still false (master > 0)');
+}
+
+// Counters: B calculation
+{
+  const cnt = new AlienAttackCounters();
+  // BASE=2, EXTRA=0 → B = (2+0)&15+1 = 3
+  assertEq(cnt.getB(2, 0), 3, 'B=3 for BASE=2, EXTRA=0');
+  // BASE=2, EXTRA=7 → B = (2+7)&15+1 = 10
+  assertEq(cnt.getB(2, 7), 10, 'B=10 for BASE=2, EXTRA=7');
+  // BASE=7, EXTRA=7 → B = (7+7)&15+1 = 15
+  assertEq(cnt.getB(7, 7), 15, 'B=15 for BASE=7, EXTRA=7');
+  // BASE=1, EXTRA=0 (BASE<2 → 0) → B = (0+0)&15+1 = 1
+  assertEq(cnt.getB(1, 0), 1, 'B=1 for BASE=1, EXTRA=0');
+}
+
+// Counters: secondary decrement triggers canAttack
+{
+  const cnt = new AlienAttackCounters();
+  // Master=5, resets each cycle. B=3 (BASE=2, EXTRA=0).
+  // Secondary 0 starts at 47. Each cycle decrements 3 secondaries.
+  // After 47 cycles (235 ticks): sec0 hits 0 → canAttack = true.
+  for (let i = 0; i < 235; i++) cnt.tick(2, 0);
+  assert(cnt.canAttack, 'canAttack true after 235 ticks (sec0 hits 0)');
+}
+
+// Counters: reload on zero
+{
+  const cnt = new AlienAttackCounters();
+  // Secondary 0 default = 0x2F = 47
+  // With BASE=2, EXTRA=0, B=3: secondaries 0,1,2 are decremented
+  // Secondary 0 starts at 47. We need 46 ticks first (master decrements to 0),
+  // then secondary 0 decrements each time master hits 0.
+  // Actually, each tick decrements master. Every 5th tick, master hits 0,
+  // which decrements B secondaries.
+  // Secondary 0: 47 decrements → 47/4 = 11 master cycles + 3 extra? No.
+  // Each cycle: master = 5 ticks, then 3 secondaries decrement.
+  // After 1 cycle: sec0 = 47-1=46. After 2: 45. ... After 47 cycles: sec0=0.
+  // 47 cycles × 5 ticks = 235 ticks.
+  for (let i = 0; i < 234; i++) cnt.tick(2, 0);
+  assert(!cnt.canAttack, 'canAttack false before secondary 0 expires');
+  cnt.tick(2, 0); // 235th tick: sec0 hits 0
+  assert(cnt.canAttack, 'canAttack true when secondary hits 0');
+  assertEq(cnt.counters[1], 0x2F, 'secondary 0 reloaded to default 0x2F');
+}
+
+// Counters: reset
+{
+  const cnt = new AlienAttackCounters();
+  for (let i = 0; i < 240; i++) cnt.tick(2, 7);
+  assert(cnt.canAttack, 'counter state changed');
+  cnt.reset();
+  assertEq(cnt.master, 5, 'master reset to 5');
+  assertEq(cnt.counters[1], 0x2F, 'secondary 0 reset');
+  assert(!cnt.canAttack, 'canAttack reset to false');
+}
+
+console.log(`\n=== Phase 3 — Alien Selector ===`);
+
+// Selector: column flags with full formation
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const flags = OrdinaryAlienSelector.buildColumnFlags(swarm);
+  // All 10 columns should be occupied
+  let occupied = 0;
+  for (let c = 3; c <= 12; c++) {
+    if (flags[c] === 1) occupied++;
+  }
+  assertEq(occupied, 10, 'all 10 columns occupied in full formation');
+}
+
+// Selector: column flags with destroyed alien
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const alien = swarm.getAlienAt(0, 0);
+  alien.kill();
+  // Update enough to let death complete
+  for (let i = 0; i < 20; i++) alien.update(swarm.offsetX, swarm.offsetY);
+  const flags = OrdinaryAlienSelector.buildColumnFlags(swarm);
+  assertEq(flags[3], 1, 'rightmost column still occupied (other aliens in col 0)');
+  // Kill all in column 0 (row 0, 1, 2)
+  // Actually, col 0 has blue at rows 0,1,2
+  swarm.getAlienAt(0, 0).kill();
+  swarm.getAlienAt(1, 0).kill();
+  swarm.getAlienAt(2, 0).kill();
+  for (let i = 0; i < 20; i++) swarm.update();
+  const flags2 = OrdinaryAlienSelector.buildColumnFlags(swarm);
+  assertEq(flags2[3], 0, 'rightmost column empty after all aliens killed');
+}
+
+// Selector: left flank
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const alien = OrdinaryAlienSelector.selectOrdinaryAlien({
+    side: 'left', swarm, unavailableAlienIds: new Set()
+  });
+  assert(alien !== null, 'left flank selects an alien');
+  // Leftmost occupied column = col 9 (index from right=3+9=12)
+  assertEq(alien.col, 9, 'left flank selects leftmost column (col 9)');
+}
+
+// Selector: right flank
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const alien = OrdinaryAlienSelector.selectOrdinaryAlien({
+    side: 'right', swarm, unavailableAlienIds: new Set()
+  });
+  assert(alien !== null, 'right flank selects an alien');
+  // Rightmost occupied column = col 0
+  assertEq(alien.col, 0, 'right flank selects rightmost column (col 0)');
+}
+
+// Selector: unavailable alien excluded
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const alien = swarm.getAlienAt(0, 0);
+  const unavailable = new Set([alien.id]);
+  const selected = OrdinaryAlienSelector.selectOrdinaryAlien({
+    side: 'right', swarm, unavailableAlienIds: unavailable
+  });
+  assert(selected !== null, 'right flank selects different alien');
+  assert(selected.id !== alien.id, 'excluded alien not selected');
+  assertEq(selected.col, 0, 'still selects from col 0');
+  assert(selected.row > 0, 'selects lower row when top is excluded');
+}
+
+// Selector: flagship excluded
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const flagship = swarm.getAlienAt(5, 3);
+  assert(flagship.isFlagship, 'flagship exists at row 5 col 3');
+  const alien = OrdinaryAlienSelector.selectOrdinaryAlien({
+    side: 'left', swarm, unavailableAlienIds: new Set()
+  });
+  assert(alien !== null, 'ordinary alien selected');
+  assert(!alien.isFlagship, 'flagship not selected');
+}
+
+// Selector: no valid aliens
+{
+  const swarm = new Swarm();
+  swarm.update();
+  // Kill all aliens
+  for (const a of swarm.layout) {
+    a.kill();
+  }
+  for (let i = 0; i < 20; i++) swarm.update();
+  const alien = OrdinaryAlienSelector.selectOrdinaryAlien({
+    side: 'left', swarm, unavailableAlienIds: new Set()
+  });
+  assert(alien === null, 'null when no aliens remain');
+}
+
+console.log(`\n=== Phase 3 — Scheduler ===`);
+
+// Scheduler: disabled by default
+{
+  const sched = new OrdinaryAttackScheduler();
+  assert(!sched.enabled, 'scheduler disabled by default');
+}
+
+// Scheduler: blocks on game state
+{
+  const sched = new OrdinaryAttackScheduler();
+  sched.setEnabled(true);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+
+  const r1 = sched.update(swarm, ctrl, 'playerDying');
+  assert(r1 === null, 'scheduler blocks during playerDying');
+  assert(sched.lastRefusalReason.includes('playerDying'), 'reason: playerDying');
+
+  const r2 = sched.update(swarm, ctrl, 'gameOver');
+  assert(r2 === null, 'scheduler blocks during gameOver');
+  assert(sched.lastRefusalReason.includes('gameOver'), 'reason: gameOver');
+}
+
+// Scheduler: blocks on swarm empty
+{
+  const sched = new OrdinaryAttackScheduler();
+  sched.setEnabled(true);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+
+  // Kill all aliens
+  for (const a of swarm.layout) {
+    a.kill();
+  }
+  for (let i = 0; i < 20; i++) swarm.update();
+  assert(swarm.isDead(), 'swarm is dead');
+
+  const r = sched.update(swarm, ctrl, 'playing');
+  assert(r === null, 'scheduler blocks on empty swarm');
+  assert(sched.lastRefusalReason.includes('no aliens'), 'reason: no aliens');
+}
+
+// Scheduler: counter tick occurs, canAttack sets eventually
+{
+  const sched = new OrdinaryAttackScheduler();
+  sched.setEnabled(true);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+
+  // Run many ticks to trigger a counter
+  let launched = false;
+  for (let i = 0; i < 500; i++) {
+    swarm.update();
+    const r = sched.update(swarm, ctrl, 'playing');
+    if (r !== null) {
+      launched = true;
+      break;
+    }
+  }
+  assert(launched, 'scheduler launches an alien within 500 ticks');
+  assert(sched.totalLaunches >= 1, 'totalLaunches >= 1');
+}
+
+console.log(`\n=== Phase 3 — Deterministic Sequence ===`);
+
+// Deterministic: two schedulers with same seed produce same sequence
+{
+  const sched1 = new OrdinaryAttackScheduler();
+  sched1.setEnabled(true);
+  sched1.rng.setState(0xAB);
+
+  const sched2 = new OrdinaryAttackScheduler();
+  sched2.setEnabled(true);
+  sched2.rng.setState(0xAB);
+
+  const swarm1 = new Swarm();
+  swarm1.update();
+  const swarm2 = new Swarm();
+  swarm2.update();
+  const ctrl1 = new InflightController();
+  const ctrl2 = new InflightController();
+
+  for (let i = 0; i < 300; i++) {
+    swarm1.update();
+    const r1 = sched1.update(swarm1, ctrl1, 'playing');
+    swarm2.update();
+    const r2 = sched2.update(swarm2, ctrl2, 'playing');
+
+    assertEq(sched1.tickCounter, sched2.tickCounter, `tick ${i} sync`);
+    assertEq(sched1.totalLaunches, sched2.totalLaunches, `launch count ${i} sync`);
+    assertEq(sched1.lastSwarmIndex, sched2.lastSwarmIndex, `swarmIndex ${i} sync`);
+    assertEq(sched1.lastRefusalReason, sched2.lastRefusalReason, `reason ${i} sync`);
+
+    if (r1 !== null && r2 !== null) {
+      ctrl1.update();
+      ctrl2.update();
+    }
+  }
+}
+
+console.log(`\n=== Phase 3 — Multiple Simultaneous Aliens ===`);
+
+// Multiple: can launch 4 aliens
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const sched = new OrdinaryAttackScheduler();
+  sched.setEnabled(true);
+  sched.setExtraDifficulty(7);
+  sched.setBaseDifficulty(7);
+
+  let launched = 0;
+  for (let i = 0; i < 1000; i++) {
+    swarm.update();
+    ctrl.update();
+    const r = sched.update(swarm, ctrl, 'playing');
+    if (r !== null) {
+      launched++;
+      ctrl.update();
+    }
+    if (launched >= 4) break;
+  }
+
+  assertEq(launched, 4, 'launched 4 aliens');
+  assertEq(ctrl.activeCount, 4, '4 active inflight aliens');
+  // Each launched from a different column/row
+  const cols = new Set();
+  const rows = new Set();
+  for (const rec of ctrl) {
+    cols.add(rec.alien.col);
+    rows.add(rec.alien.row);
+    assert(rec.alien.state !== 'inFormation', `alien ${rec.alien.id} left formation`);
+  }
+  assert(cols.size >= 2, 'aliens from at least 2 columns');
+}
+
+// Multiple: 5th alien refused
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const sched = new OrdinaryAttackScheduler();
+  sched.setEnabled(true);
+  sched.setExtraDifficulty(7);
+  sched.setBaseDifficulty(7);
+
+  // Launch 4 via scheduler
+  let launched = 0;
+  for (let i = 0; i < 1000; i++) {
+    swarm.update();
+    ctrl.update();
+    const r = sched.update(swarm, ctrl, 'playing');
+    if (r !== null) {
+      launched++;
+      ctrl.update();
+    }
+    if (launched >= 4) break;
+  }
+  assertEq(ctrl.activeCount, 4, '4 active before 5th attempt');
+
+  // Try to launch 5th — scheduler should refuse due to maxInflight
+  let fifthAttempted = false;
+  let sawMaxInflightRefusal = false;
+  for (let i = 0; i < 300; i++) {
+    swarm.update();
+    ctrl.update();
+    const r = sched.update(swarm, ctrl, 'playing');
+    if (r !== null) {
+      fifthAttempted = true;
+      break;
+    }
+    if (sched.lastRefusalReason.includes('max inflight')) {
+      sawMaxInflightRefusal = true;
+    }
+  }
+  assert(!fifthAttempted, '5th alien refused');
+  assert(sawMaxInflightRefusal, 'at least one refusal was max inflight');
+}
+
+// Multiple: each returns to its own slot
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const sched = new OrdinaryAttackScheduler();
+  sched.setEnabled(true);
+  sched.setExtraDifficulty(7);
+  sched.setBaseDifficulty(7);
+
+  // Launch 2 aliens via scheduler
+  let totalLaunched = 0;
+  for (let ticks = 0; ticks < 1000; ticks++) {
+    swarm.update();
+    ctrl.update();
+    const r = sched.update(swarm, ctrl, 'playing');
+    if (r !== null) {
+      totalLaunched++;
+    }
+    if (totalLaunched >= 2) break;
+  }
+  assert(totalLaunched >= 2, `launched ${totalLaunched} aliens`);
+
+  // Disable scheduler and run lifecycle to completion
+  sched.setEnabled(false);
+  // Phase 2 lifecycle total: ~400-500 ticks per alien. Add generous margin.
+  for (let ticks = 0; ticks < 3000; ticks++) {
+    swarm.update();
+    ctrl.update();
+  }
+
+  // If still active, force-free slots for cleanup
+  if (ctrl.activeCount > 0) {
+    for (const rec of [...ctrl]) {
+      ctrl.freeSlot(rec.slot, false);
+    }
+  }
+  assertEq(ctrl.activeCount, 0, 'both returned after scheduler disabled');
+  assertEq(ctrl.pool.allocatedCount, 0, 'all slots freed');
+}
+
+console.log(`\n=== Phase 3 — Column Flags ===`);
+
+// Column flags: row checking
+{
+  const swarm = new Swarm();
+  swarm.update();
+  const flags = OrdinaryAlienSelector.buildRowFlags(swarm);
+  // All 5 ordinary rows should be occupied
+  for (let r = 0; r < 5; r++) {
+    assertEq(flags[r], 1, `row ${r} has aliens`);
+  }
+  // Row 5 (flagship) should not be in ordinary flags
+  assertEq(flags[5], 0, 'row 5 (flagship) not in ordinary flags');
+}
+
+// Column flags: hole in formation
+{
+  const swarm = new Swarm();
+  swarm.update();
+  // Destroy all aliens in col 0
+  for (let r = 0; r < 5; r++) {
+    const a = swarm.getAlienAt(r, 0);
+    if (a) {
+      a.kill();
+      for (let i = 0; i < 20; i++) a.update(swarm.offsetX, swarm.offsetY);
+    }
+  }
+  swarm.update();
+  const flags = OrdinaryAlienSelector.buildColumnFlags(swarm);
+  assertEq(flags[3], 0, 'column 0 flag is 0 after all killed');
+}
+
+console.log(`\n=== Phase 3 — Max Inflight ===`);
+
+// Max inflight calculation
+{
+  const sched = new OrdinaryAttackScheduler();
+  sched.setBaseDifficulty(2);
+  sched.setExtraDifficulty(0);
+  assertEq(sched.maxInflight, 2, 'maxInflight=2 at BASE=2, EXTRA=0');
+
+  sched.setExtraDifficulty(7);
+  assertEq(sched.maxInflight, 4, 'maxInflight=4 at BASE=2, EXTRA=7');
+
+  sched.setBaseDifficulty(7);
+  sched.setExtraDifficulty(7);
+  assertEq(sched.maxInflight, 4, 'maxInflight=4 at BASE=7, EXTRA=7 (capped)');
+}
+
+console.log(`\n=== Phase 3 — Refusal Reasons ===`);
+
+// Refusal: disabled
+{
+  const sched = new OrdinaryAttackScheduler();
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  sched.update(swarm, ctrl, 'playing');
+  assert(sched.lastRefusalReason.includes('disabled'), 'refused: disabled');
+}
+
+// Refusal: max inflight
+{
+  const sched = new OrdinaryAttackScheduler();
+  sched.setEnabled(true);
+  sched.setBaseDifficulty(7);
+  sched.setExtraDifficulty(7);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+
+  // Manually launch 4 aliens from valid positions
+  const count = ctrl.pool.freeCount;
+  for (let row = 0; row < 3 && ctrl.activeCount < 4; row++) {
+    for (let col = 0; col < 10 && ctrl.activeCount < 4; col++) {
+      const a = swarm.getAlienAt(row, col);
+      if (a && a.isInFormation) {
+        ctrl.launchOrdinaryAlien(a, swarm, false);
+      }
+    }
+  }
+  assertEq(ctrl.activeCount, 4, '4 active after manual launch');
+
+  // Run scheduler ticks until canAttack fires — should refuse due to maxInflight
+  let sawMaxInflightRefusal = false;
+  for (let i = 0; i < 300; i++) {
+    swarm.update();
+    ctrl.update();
+    sched.update(swarm, ctrl, 'playing');
+    if (sched.lastRefusalReason.includes('max inflight')) {
+      sawMaxInflightRefusal = true;
+      break;
+    }
+  }
+  assert(sawMaxInflightRefusal, 'scheduler refused: max inflight');
+  assertEq(ctrl.activeCount, 4, 'still 4 active after refusal');
 }
 
 console.log(`\n=== SUMMARY ===`);
