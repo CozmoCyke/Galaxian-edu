@@ -31,6 +31,7 @@ function computeSwarmTargetY(alien, swarm) {
   return (swarm ? swarm.offsetY : 0) + col * 16 + 7;
 }
 
+export { STAGE };
 export class InflightController {
 
   constructor() {

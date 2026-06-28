@@ -59,6 +59,15 @@ export const CONFIG = {
     MAX_DISPLAY: 4,
   },
 
+  ENEMY_BULLET: {
+    WIDTH: 2,
+    HEIGHT: 4,
+    SPEED: 1.5,
+    COLOR: '#FF4444',
+    MAX_ACTIVE: 14,
+    FIRE_COOLDOWN: 30,
+  },
+
   DEBUG_KEY: 'F2',
   RESTART_KEY: 'N',
 

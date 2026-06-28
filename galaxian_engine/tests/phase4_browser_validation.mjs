@@ -155,6 +155,9 @@ async function main() {
   let snap = await getSnap(page);
   console.log(`Initial state: ${snap.state}, swarm alive=${snap.swarm.aliveCount}`);
 
+  // Phase 5A: enemy bullets are now active — protect test scenarios from accidental player death
+  await page.evaluate(() => window.__galaxianTest.setPlayerInvincible(true));
+
 
 
   console.log(`\n=== PHASE 4 BROWSER VALIDATION ===\n`);

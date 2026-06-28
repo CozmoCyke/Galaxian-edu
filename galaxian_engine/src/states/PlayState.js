@@ -8,6 +8,8 @@ import { OrdinaryAttackScheduler } from '../attacks/OrdinaryAttackScheduler.js';
 import { FlagshipAttackScheduler } from '../flagship/FlagshipAttackScheduler.js';
 import { ShockController } from '../flagship/ShockController.js';
 import { FlagshipScoreCalculator } from '../flagship/FlagshipScoreCalculator.js';
+import { EnemyBulletPool } from '../entities/EnemyBulletPool.js';
+import { EnemyBulletController } from '../attacks/EnemyBulletController.js';
 
 export class PlayState {
 
@@ -29,6 +31,10 @@ export class PlayState {
     this.scheduler = new OrdinaryAttackScheduler();
     this.flagshipScheduler = new FlagshipAttackScheduler();
     this.shockCtrl = new ShockController();
+    this.enemyBulletPool = new EnemyBulletPool();
+    this.enemyBulletCtrl = new EnemyBulletController(
+      this.enemyBulletPool, this.inflightCtrl, this.player, this.shockCtrl
+    );
     this._gameState = 'playing';
   }
 
@@ -90,6 +96,9 @@ export class PlayState {
     this._checkCollisions();
     this.swarm.update();
     this.inflightCtrl.update();
+    this.enemyBulletCtrl.update(this._getGameState());
+    this.enemyBulletPool.update();
+    this._checkPlayerHit();
 
     // Group lifecycle tracking (always, independent of scheduler enabled state)
     this.flagshipScheduler.updateGroupLifecycle(this.inflightCtrl);
@@ -193,6 +202,27 @@ export class PlayState {
     }
   }
 
+  _checkPlayerHit() {
+    if (!this.player.alive || this.player.recovering) return;
+    if (this._ignorePlayerCollisions) return;
+
+    for (const bullet of this.enemyBulletPool) {
+      const bx = bullet.x;
+      const by = bullet.y;
+      const bw = CONFIG.ENEMY_BULLET.WIDTH;
+      const bh = CONFIG.ENEMY_BULLET.HEIGHT;
+
+      if (bx + bw <= this.player.x) continue;
+      if (bx >= this.player.x + this.player.width) continue;
+      if (by + bh <= this.player.y) continue;
+      if (by >= this.player.y + this.player.height) continue;
+
+      bullet.active = false;
+      this.game.sm.transition('playerDying');
+      return;
+    }
+  }
+
   _checkBonusLife() {
     if (this.game.score > 0 && this.game.score % CONFIG.SCORE.EXTRA_LIFE_INTERVAL === 0) {
       this.game.lives++;
@@ -209,6 +239,7 @@ export class PlayState {
     this.renderer.clear();
 
     this.swarm.render(this.game.ctx);
+    this.enemyBulletPool.render(this.game.ctx);
     this.player.render(this.game.ctx);
     this.playerBullet.render(this.game.ctx);
 

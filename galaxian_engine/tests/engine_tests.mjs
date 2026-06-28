@@ -1647,6 +1647,250 @@ await (async () => {
   }
 })();
 
+console.log('\n=== ENEMY BULLET POOL ===\n');
+
+{
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const pool = new EnemyBulletPool();
+
+  assertEq(pool.activeCount, 0, 'pool starts empty');
+  assertEq(CONFIG.ENEMY_BULLET.MAX_ACTIVE, 14, 'max active = 14');
+
+  const slot = pool.allocate(100, 50, 0, 1.5);
+  assert(slot !== null, 'allocate returns a slot');
+  assertEq(slot.active, true, 'slot is active');
+  assertEq(slot.x, 100, 'slot x set');
+  assertEq(slot.y, 50, 'slot y set');
+  assertEq(slot.vx, 0, 'slot vx set');
+  assertEq(slot.vy, 1.5, 'slot vy set');
+  assertEq(pool.activeCount, 1, 'one active after allocate');
+
+  slot.x = 100;
+  slot.y = 100;
+  pool.update();
+  assertEq(slot.y, 101.5, 'bullet moves by vy each tick');
+
+  pool.free(slot);
+  assertEq(slot.active, false, 'slot inactive after free');
+  assertEq(pool.activeCount, 0, 'pool empty after free');
+}
+
+{
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const pool = new EnemyBulletPool();
+
+  const slots = [];
+  for (let i = 0; i < 14; i++) {
+    const s = pool.allocate(0, 0, 0, 1);
+    slots.push(s);
+    assert(s !== null, `allocate ${i+1} ok`);
+  }
+  assertEq(pool.activeCount, 14, 'all 14 slots active');
+  assertEq(pool.allocate(0, 0, 0, 1), null, '15th allocation returns null');
+}
+
+{
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const pool = new EnemyBulletPool();
+
+  const s1 = pool.allocate(100, 50, 0, 1);
+  const s2 = pool.allocate(200, 80, 1, 2);
+  assertEq(pool.activeCount, 2, '2 active before update');
+
+  s1.y = CONFIG.CANVAS_HEIGHT + 10;
+  pool.update();
+  assertEq(s1.active, false, 'bullet deactivated when past bottom');
+  assertEq(s2.active, true, 'other bullet still active');
+  assertEq(pool.activeCount, 1, '1 active after off-screen deactivation');
+}
+
+{
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const pool = new EnemyBulletPool();
+
+  pool.allocate(100, 50, 0, 1);
+  pool.allocate(200, 80, 1, 2);
+  assertEq(pool.activeCount, 2, '2 active before reset');
+
+  pool.reset();
+  assertEq(pool.activeCount, 0, '0 active after reset');
+}
+
+{
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const pool = new EnemyBulletPool();
+
+  pool.allocate(10, 20, 0, 1);
+  pool.allocate(30, 40, 0, 2);
+
+  let count = 0;
+  for (const b of pool) {
+    count++;
+    assert(b.active, 'iterated bullet is active');
+  }
+  assertEq(count, 2, 'iterator visits 2 active bullets');
+
+  let forEachCount = 0;
+  pool.forEach(() => forEachCount++);
+  assertEq(forEachCount, 2, 'forEach visits 2 active bullets');
+}
+
+console.log('\n=== ENEMY BULLET CONTROLLER ===\n');
+
+{
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const { EnemyBulletController } = await import('../src/attacks/EnemyBulletController.js');
+  const { ShockController } = await import('../src/flagship/ShockController.js');
+  const { Player } = await import('../src/entities/Player.js');
+
+  const mockGame = new MockGame();
+  const player = new Player(mockGame);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const pool = new EnemyBulletPool();
+  const shock = new ShockController();
+
+  const alien = swarm.getAlienAt(0, 0);
+  const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
+
+  const bulletCtrl = new EnemyBulletController(pool, ctrl, player, shock);
+
+  assertEq(pool.activeCount, 0, 'no bullets before update');
+
+  // Advance alien through arc to ATTACKING_PLAYER stage
+  // 48 updates: 1st transitions to FLIES_IN_ARC, 47 arc ticks complete the arc
+  for (let i = 0; i < 48; i++) ctrl.update();
+  assertEq(rec.stageOfLife, 2, 'stage = READY_TO_ATTACK (2) after arc');
+
+  // One more update transitions to ATTACKING_PLAYER
+  ctrl.update();
+  assert(rec.stageOfLife >= 3, 'stage >= ATTACKING_PLAYER (3)');
+
+  // Now bullet controller should fire after cooldown expires
+  bulletCtrl.update('playing');
+  assert(pool.activeCount >= 1, 'bullet fired from attacking alien');
+}
+
+{
+  // Controller does not fire during shock
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const { EnemyBulletController } = await import('../src/attacks/EnemyBulletController.js');
+  const { ShockController } = await import('../src/flagship/ShockController.js');
+  const { Player } = await import('../src/entities/Player.js');
+
+  const mockGame = new MockGame();
+  const player = new Player(mockGame);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const pool = new EnemyBulletPool();
+  const shock = new ShockController();
+
+  const alien = swarm.getAlienAt(0, 1);
+  const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
+  for (let i = 0; i < 49; i++) ctrl.update();
+  assert(rec.stageOfLife >= 3, 'stage >= ATTACKING_PLAYER (3)');
+
+  const bulletCtrl = new EnemyBulletController(pool, ctrl, player, shock);
+
+  // Trigger shock
+  shock.trigger();
+  assert(shock.isActive, 'shock active');
+
+  // Clear the cooldown timer by calling update once outside shock
+  // then reset the pool and call update during shock
+  bulletCtrl.update('playing');
+  const beforeShock = pool.activeCount;
+  pool.reset();
+
+  // During shock, no new bullets should fire
+  bulletCtrl.update('playing');
+  assertEq(pool.activeCount, 0, 'no bullets fired during shock');
+  shock.reset();
+}
+
+{
+  // Controller does not fire when game state is not 'playing'
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const { EnemyBulletController } = await import('../src/attacks/EnemyBulletController.js');
+  const { ShockController } = await import('../src/flagship/ShockController.js');
+  const { Player } = await import('../src/entities/Player.js');
+
+  const mockGame = new MockGame();
+  const player = new Player(mockGame);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const pool = new EnemyBulletPool();
+  const shock = new ShockController();
+
+  const alien = swarm.getAlienAt(0, 2);
+  const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
+  for (let i = 0; i < 49; i++) ctrl.update();
+  assert(rec.stageOfLife >= 3, 'stage >= ATTACKING_PLAYER (3)');
+
+  const bulletCtrl = new EnemyBulletController(pool, ctrl, player, shock);
+
+  bulletCtrl.update('playerDying');
+  assertEq(pool.activeCount, 0, 'no bullets during playerDying state');
+}
+
+{
+  // Controller does not fire when player is recovering
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const { EnemyBulletController } = await import('../src/attacks/EnemyBulletController.js');
+  const { ShockController } = await import('../src/flagship/ShockController.js');
+  const { Player } = await import('../src/entities/Player.js');
+
+  const mockGame = new MockGame();
+  const player = new Player(mockGame);
+  player.startRecover();
+  assert(player.recovering, 'player is recovering');
+
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const pool = new EnemyBulletPool();
+  const shock = new ShockController();
+
+  const alien = swarm.getAlienAt(0, 3);
+  const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
+  for (let i = 0; i < 49; i++) ctrl.update();
+
+  const bulletCtrl = new EnemyBulletController(pool, ctrl, player, shock);
+
+  bulletCtrl.update('playing');
+  assertEq(pool.activeCount, 0, 'no bullets while player recovering');
+}
+
+{
+  // Reset clears timers and pool
+  const { EnemyBulletPool } = await import('../src/entities/EnemyBulletPool.js');
+  const { EnemyBulletController } = await import('../src/attacks/EnemyBulletController.js');
+  const { ShockController } = await import('../src/flagship/ShockController.js');
+  const { Player } = await import('../src/entities/Player.js');
+
+  const mockGame = new MockGame();
+  const player = new Player(mockGame);
+  const swarm = new Swarm();
+  swarm.update();
+  const ctrl = new InflightController();
+  const pool = new EnemyBulletPool();
+  const shock = new ShockController();
+
+  const alien = swarm.getAlienAt(0, 4);
+  const rec = ctrl.launchOrdinaryAlien(alien, swarm, false);
+  for (let i = 0; i < 49; i++) ctrl.update();
+
+  const bulletCtrl = new EnemyBulletController(pool, ctrl, player, shock);
+  bulletCtrl.update('playing');
+  assert(pool.activeCount > 0, 'bullets fired before reset');
+
+  bulletCtrl.reset();
+  assertEq(pool.activeCount, 0, 'pool empty after reset');
+}
+
 console.log(`\n=== SUMMARY ===`);
 console.log(`Passed: ${passed}`);
 console.log(`Failed: ${failed}`);

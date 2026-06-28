@@ -1,4 +1,4 @@
-// Test adapter for automated browser validation (Phase 4).
+// Test adapter for automated browser validation (Phase 4, 5A).
 // Activated via ?test=1 query parameter.
 // Calls the same public methods as keyboard input — does not bypass
 // scheduler, counters, selectors, slot allocation, group, shock, or returns.
@@ -97,6 +97,39 @@ export function initTestAdapter(game) {
     return api.getSnapshot();
   };
 
+  api.getEnemyBulletSnapshot = () => {
+    const ps = game.playState;
+    if (!ps || !ps.enemyBulletPool) return { activeCount: 0, bullets: [] };
+    const bullets = [];
+    for (const b of ps.enemyBulletPool) {
+      bullets.push({ x: Math.round(b.x), y: Math.round(b.y), vx: b.vx, vy: b.vy, id: b.id });
+    }
+    return { activeCount: bullets.length, bullets };
+  };
+
+  api.setPlayerInvincible = (invincible) => {
+    const ps = game.playState;
+    if (!ps) return;
+    ps._ignorePlayerCollisions = invincible;
+  };
+
+  api.forceEnemyFire = () => {
+    const ps = game.playState;
+    if (!ps || !ps.enemyBulletCtrl || !ps.inflightCtrl) return false;
+    const player = ps.player;
+    if (!player) return false;
+    for (const record of ps.inflightCtrl) {
+      if (!record.alien || !record.alien.alive) continue;
+      const dx = player.x - record.x;
+      const dy = player.y - record.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const speed = 1.5;
+      ps.enemyBulletPool.allocate(record.x, record.y, (dx / dist) * speed, (dy / dist) * speed);
+      return true;
+    }
+    return false;
+  };
+
   api.getSnapshot = () => {
     const ps = game.playState;
     if (!ps) return { state: game.sm.currentName, tick: game.logicTick };
@@ -167,6 +200,10 @@ export function initTestAdapter(game) {
         isActive: ps.shockCtrl ? ps.shockCtrl.isActive : null,
         counter: ps.shockCtrl ? ps.shockCtrl.counter : null,
         duration: ps.shockCtrl ? ps.shockCtrl.duration : null,
+      },
+      enemyBullets: {
+        activeCount: ps.enemyBulletPool ? ps.enemyBulletPool.activeCount : 0,
+        maxActive: 14,
       },
       player: {
         x: Math.round(ps.player.x),
