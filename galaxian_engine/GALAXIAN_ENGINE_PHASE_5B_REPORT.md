@@ -160,6 +160,7 @@ Chaque effet est rendu via `OfflineAudioContext`, puis validé :
 ## Historique des commits
 
 ```
+b76a849 docs: finalize Phase 5A-5B publication report (6-step process, tags, bundle)
 d3732b4 feat(5B): deterministic arcade audio engine with OfflineAudioContext validation
 fbcb83a feat(5A): enemy bullet pool, controller, browser validation, and tests
 735e9a4 docs: finalize phase 4 report with publication audit and results
@@ -174,9 +175,9 @@ fbcb83a feat(5A): enemy bullet pool, controller, browser validation, and tests
 | 1 — Audit de publication | 22 fichiers modifiés, aucun contenu privé/unsafe, pas d'assets WAV/MP3/PNG (synthèse Web Audio API), `__galaxianTest` uniquement sous `?test=1`, pas de push master privé | COMPLETE |
 | 2 — Revalidation | 2114 engine + 43 Phase 4 + 5 Phase 5A + 18 Phase 5B + 6 OfflineAudioContext = **2186/2186**, 0 console/page/network/404 errors | COMPLETE |
 | 3 — Push branche | `feat/phase-5a-enemy-bullets` → origin (c2ba18b, 3 commits) | COMPLETE |
-| 4 — Fast-forward main | `main` ← `feat/phase-5a-enemy-bullets`, poussé vers origin | COMPLETE |
-| 5 — Tags | `phase-5a-complete` (annoté, fbcb83a) et `phase-5b-complete` (annoté, c2ba18b) créés et poussés | COMPLETE |
-| 6 — Bundle privé | `galaxian-edu-phase-5a-5b-full-history.bundle` (1.47 MB, SHA256: 2C966290C80F509B100B2E69CEEEFB7E7E93BB315AFCFDFD0CC14DE45047248A, vérifié, restore testé) | COMPLETE |
+| 4 — Fast-forward main | `main` ← `feat/phase-5a-enemy-bullets` + final doc commit (b76a849), poussé vers origin | COMPLETE |
+| 5 — Tags | `phase-5a-complete` (annoté, fbcb83a) et `phase-5b-complete` (annoté, b76a849, déplacé après mise à jour du rapport final) créés et poussés | COMPLETE |
+| 6 — Bundle privé | `galaxian-edu-phase-5a-5b-full-history.bundle` (1.47 MB, SHA256: 2CBFDBE96A131CF3F60D30896A7518ECC0A0B53566021EC0AB32E4AD8AC828C7, vérifié, restore testé) | COMPLETE |
 
 ### Résultats de validation (état publié)
 
@@ -192,9 +193,9 @@ fbcb83a feat(5A): enemy bullet pool, controller, browser validation, and tests
 
 ### État Git (Final)
 
-- Branche `main` : **c2ba18b** (identique à `origin/main`)
+- Branche `main` : **b76a849** (identique à `origin/main`)
 - Tag `phase-5a-complete` : annoté, pointe sur fbcb83a
-- Tag `phase-5b-complete` : annoté, pointe sur c2ba18b
+- Tag `phase-5b-complete` : annoté, pointe sur b76a849
 - Arbre de travail : **PROPRE**
 - Branche privée `master` : **NON poussée** (pas de remote configuré)
 - Bundle complet : vérifié, restore-testé, stocké à la racine du dépôt (gitignoré par `*.bundle`)
