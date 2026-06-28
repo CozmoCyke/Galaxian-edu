@@ -34,4 +34,4 @@ Desktop.ini
 
 # Private bundles (full local history backup)
 *.bundle
-*.bundle.manifest.txt
+*.bundle.*
