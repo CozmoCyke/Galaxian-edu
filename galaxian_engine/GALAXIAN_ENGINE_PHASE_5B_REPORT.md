@@ -165,7 +165,36 @@ fbcb83a feat(5A): enemy bullet pool, controller, browser validation, and tests
 735e9a4 docs: finalize phase 4 report with publication audit and results
 ```
 
-## Arrêt avant publication
+## Publication — Phase 5A–5B combinée
 
-⚠️ **Ne pas pusher.** Les commits 5A et 5B sont en avance de 2 commits sur `origin/main`.
-La publication sera faite après finalisation et approbation du rapport.
+**Statut : PUBLIÉ.** Les Phases 5A et 5B ont été fusionnées et taguées en une livraison combinée.
+
+| Étape | Détail | Statut |
+|---|---|---|
+| 1 — Audit de publication | 22 fichiers modifiés, aucun contenu privé/unsafe, pas d'assets WAV/MP3/PNG (synthèse Web Audio API), `__galaxianTest` uniquement sous `?test=1`, pas de push master privé | COMPLETE |
+| 2 — Revalidation | 2114 engine + 43 Phase 4 + 5 Phase 5A + 18 Phase 5B + 6 OfflineAudioContext = **2186/2186**, 0 console/page/network/404 errors | COMPLETE |
+| 3 — Push branche | `feat/phase-5a-enemy-bullets` → origin (c2ba18b, 3 commits) | COMPLETE |
+| 4 — Fast-forward main | `main` ← `feat/phase-5a-enemy-bullets`, poussé vers origin | COMPLETE |
+| 5 — Tags | `phase-5a-complete` (annoté, fbcb83a) et `phase-5b-complete` (annoté, c2ba18b) créés et poussés | COMPLETE |
+| 6 — Bundle privé | `galaxian-edu-phase-5a-5b-full-history.bundle` (1.47 MB, SHA256: 2C966290C80F509B100B2E69CEEEFB7E7E93BB315AFCFDFD0CC14DE45047248A, vérifié, restore testé) | COMPLETE |
+
+### Résultats de validation (état publié)
+
+| Suite | Passed | Failed |
+|---|---|---|
+| Tests moteur (Node.js) | 2114 | 0 |
+| Phase 4 browser (Chromium) | 43 | 0 |
+| Phase 5A browser (Chromium) | 5 | 0 |
+| Phase 5B browser (Chromium) | 18 | 0 |
+| OfflineAudioContext (Chromium) | 6 | 0 |
+| **Total distinct (browser)** | **72** | **0** |
+| **Total validations** | **2186** | **0** |
+
+### État Git (Final)
+
+- Branche `main` : **c2ba18b** (identique à `origin/main`)
+- Tag `phase-5a-complete` : annoté, pointe sur fbcb83a
+- Tag `phase-5b-complete` : annoté, pointe sur c2ba18b
+- Arbre de travail : **PROPRE**
+- Branche privée `master` : **NON poussée** (pas de remote configuré)
+- Bundle complet : vérifié, restore-testé, stocké à la racine du dépôt (gitignoré par `*.bundle`)
