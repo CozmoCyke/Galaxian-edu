@@ -1,4 +1,5 @@
 import { Renderer } from '../rendering/Renderer.js';
+import { AudioEventBus, EVENTS } from '../audio/AudioEventBus.js';
 
 export class GameOverState {
 
@@ -15,6 +16,7 @@ export class GameOverState {
     if (this.game.score > this.game.highScore) {
       this.game.highScore = this.game.score;
     }
+    AudioEventBus.emit(EVENTS.GAME_OVER);
   }
 
   exit() {}

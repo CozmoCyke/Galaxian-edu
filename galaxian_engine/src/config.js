@@ -68,6 +68,16 @@ export const CONFIG = {
     FIRE_COOLDOWN: 30,
   },
 
+  AUDIO: {
+    MASTER_VOLUME: 0.5,
+    HUM_BASE_FREQ: 55,
+    HUM_MAX_FREQ: 80,
+    HUM_MIN_FREQ: 40,
+    HUM_BASE_GAIN: 0.08,
+    HUM_MAX_GAIN: 0.18,
+    MAX_SIMULTANEOUS_DIVES: 3,
+  },
+
   DEBUG_KEY: 'F2',
   RESTART_KEY: 'N',
 

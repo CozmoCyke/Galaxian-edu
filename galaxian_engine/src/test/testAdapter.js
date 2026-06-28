@@ -1,10 +1,13 @@
-// Test adapter for automated browser validation (Phase 4, 5A).
+// Test adapter for automated browser validation (Phases 4, 5A, 5B).
 // Activated via ?test=1 query parameter.
 // Calls the same public methods as keyboard input — does not bypass
-// scheduler, counters, selectors, slot allocation, group, shock, or returns.
+// scheduler, counters, selectors, slot allocation, group, shock, returns, or audio.
 
-export function initTestAdapter(game) {
+import { AudioEventBus, EVENTS } from '../audio/AudioEventBus.js';
+
+export function initTestAdapter(game, audioManager) {
   const api = {};
+  api._audioManager = audioManager || null;
 
   Object.defineProperty(window, '__galaxianTest', {
     value: api,
@@ -130,6 +133,23 @@ export function initTestAdapter(game) {
     return false;
   };
 
+  api.getAudioEvents = () => AudioEventBus.events;
+
+  api.clearAudioEvents = () => { AudioEventBus.clear(); };
+
+  api.emitAudioEvent = (type) => { AudioEventBus.emit(type); };
+
+  api._getGame = () => game;
+
+  api.getAudioManagerState = () => {
+    if (!api._audioManager) return null;
+    return {
+      initialized: api._audioManager.initialized,
+      muted: api._audioManager.muted,
+      audioLocked: api._audioManager.audioLocked,
+    };
+  };
+
   api.getSnapshot = () => {
     const ps = game.playState;
     if (!ps) return { state: game.sm.currentName, tick: game.logicTick };
@@ -205,6 +225,7 @@ export function initTestAdapter(game) {
         activeCount: ps.enemyBulletPool ? ps.enemyBulletPool.activeCount : 0,
         maxActive: 14,
       },
+      audioEvents: AudioEventBus.count,
       player: {
         x: Math.round(ps.player.x),
         y: Math.round(ps.player.y),

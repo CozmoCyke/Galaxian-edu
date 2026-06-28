@@ -1,4 +1,5 @@
 import { Renderer } from '../rendering/Renderer.js';
+import { AudioEventBus, EVENTS } from '../audio/AudioEventBus.js';
 
 export class PlayerDyingState {
 
@@ -11,6 +12,7 @@ export class PlayerDyingState {
   enter() {
     this._timer = 90;
     this.game.lives--;
+    AudioEventBus.emit(EVENTS.PLAYER_DESTROYED);
   }
 
   exit() {}

@@ -10,6 +10,7 @@ import { ShockController } from '../flagship/ShockController.js';
 import { FlagshipScoreCalculator } from '../flagship/FlagshipScoreCalculator.js';
 import { EnemyBulletPool } from '../entities/EnemyBulletPool.js';
 import { EnemyBulletController } from '../attacks/EnemyBulletController.js';
+import { AudioEventBus, EVENTS } from '../audio/AudioEventBus.js';
 
 export class PlayState {
 
@@ -36,6 +37,8 @@ export class PlayState {
       this.enemyBulletPool, this.inflightCtrl, this.player, this.shockCtrl
     );
     this._gameState = 'playing';
+    AudioEventBus.emit(EVENTS.STAGE_STARTED, { level: this.game.level });
+    this._emittedEvents = {};
   }
 
   _launchDebugAlien(clockwise) {
@@ -86,6 +89,7 @@ export class PlayState {
   }
 
   update() {
+    this._emittedEvents = {};
     this.player.update();
 
     if (this.game.input.firePressed) {
@@ -96,7 +100,23 @@ export class PlayState {
     this._checkCollisions();
     this.swarm.update();
     this.inflightCtrl.update();
+
+    for (const rec of this.inflightCtrl) {
+      if (!rec._diveEventEmitted && rec.stageOfLife >= 3) {
+        rec._diveEventEmitted = true;
+        this._emitOnce(EVENTS.ALIEN_DIVE_STARTED, {
+          swarmIndex: rec.alien.swarmIndex,
+          type: rec.alien.type,
+        });
+      }
+    }
+
+    const prevBulletCount = this.enemyBulletPool.activeCount;
     this.enemyBulletCtrl.update(this._getGameState());
+    if (this.enemyBulletPool.activeCount > prevBulletCount) {
+      this._emitOnce(EVENTS.ENEMY_SHOT);
+    }
+
     this.enemyBulletPool.update();
     this._checkPlayerHit();
 
@@ -108,6 +128,12 @@ export class PlayState {
     if (killEvent) {
       if (killEvent.type === 'flagship_killed' || killEvent.type === 'escort_killed') {
         this.shockCtrl.trigger();
+      }
+      if (killEvent.type === 'flagship_killed') {
+        this._emitOnce(EVENTS.FLAGSHIP_DESTROYED, {
+          swarmIndex: killEvent.alien.swarmIndex,
+          groupId: killEvent.group.groupId,
+        });
       }
       this.flagshipScheduler.clearEvents();
     }
@@ -173,6 +199,7 @@ export class PlayState {
       this.player.x + Math.floor(CONFIG.SWARM.H_SPACE / 2),
       this.player.y - CONFIG.BULLET.HEIGHT
     );
+    this._emitOnce(EVENTS.PLAYER_SHOT);
   }
 
   _checkCollisions() {
@@ -194,6 +221,11 @@ export class PlayState {
       alien.kill();
       this.game.score += alien.scoreValue;
       this._checkBonusLife();
+      this._emitOnce(EVENTS.ALIEN_DESTROYED, {
+        type: alien.type,
+        swarmIndex: alien.swarmIndex,
+        scoreValue: alien.scoreValue,
+      });
 
       if (this.swarm.aliveCount === 0) {
         this._levelComplete();
@@ -221,6 +253,13 @@ export class PlayState {
       this.game.sm.transition('playerDying');
       return;
     }
+  }
+
+  _emitOnce(type, data) {
+    if (this._emittedEvents && this._emittedEvents[type]) return;
+    this._emittedEvents = this._emittedEvents || {};
+    this._emittedEvents[type] = true;
+    AudioEventBus.emit(type, data);
   }
 
   _checkBonusLife() {
