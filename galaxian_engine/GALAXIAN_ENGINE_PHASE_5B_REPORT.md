@@ -160,6 +160,7 @@ Chaque effet est rendu via `OfflineAudioContext`, puis validé :
 ## Historique des commits
 
 ```
+e785d25 docs: update Phase 5B report with final tag/bundle SHA values after doc amend
 b76a849 docs: finalize Phase 5A-5B publication report (6-step process, tags, bundle)
 d3732b4 feat(5B): deterministic arcade audio engine with OfflineAudioContext validation
 fbcb83a feat(5A): enemy bullet pool, controller, browser validation, and tests
@@ -177,7 +178,7 @@ fbcb83a feat(5A): enemy bullet pool, controller, browser validation, and tests
 | 3 — Push branche | `feat/phase-5a-enemy-bullets` → origin (c2ba18b, 3 commits) | COMPLETE |
 | 4 — Fast-forward main | `main` ← `feat/phase-5a-enemy-bullets` + final doc commit (b76a849), poussé vers origin | COMPLETE |
 | 5 — Tags | `phase-5a-complete` (annoté, fbcb83a) et `phase-5b-complete` (annoté, b76a849, déplacé après mise à jour du rapport final) créés et poussés | COMPLETE |
-| 6 — Bundle privé | `galaxian-edu-phase-5a-5b-full-history.bundle` (1.47 MB, SHA256: 2CBFDBE96A131CF3F60D30896A7518ECC0A0B53566021EC0AB32E4AD8AC828C7, vérifié, restore testé) | COMPLETE |
+| 6 — Bundle privé | `galaxian-edu-phase-5a-5b-full-history.bundle` (1.47 MB, SHA256: 26439F24C57F5A1F04D7615D3E5DDD0D54F8DF927E0ECDD3B373FEC0E77A0629, vérifié, restore testé) | COMPLETE |
 
 ### Résultats de validation (état publié)
 
@@ -193,9 +194,9 @@ fbcb83a feat(5A): enemy bullet pool, controller, browser validation, and tests
 
 ### État Git (Final)
 
-- Branche `main` : **b76a849** (identique à `origin/main`)
+- Branche `main` : **e785d25** (identique à `origin/main`)
 - Tag `phase-5a-complete` : annoté, pointe sur fbcb83a
-- Tag `phase-5b-complete` : annoté, pointe sur b76a849
+- Tag `phase-5b-complete` : annoté, pointe sur e785d25
 - Arbre de travail : **PROPRE**
 - Branche privée `master` : **NON poussée** (pas de remote configuré)
 - Bundle complet : vérifié, restore-testé, stocké à la racine du dépôt (gitignoré par `*.bundle`)
