@@ -76,8 +76,10 @@ All scenarios verified: 0 console errors, 0 page errors, 0 request failures.
 
 | Metric | Value |
 |---|---|
-| Total test assertions | 2,219+ |
-| Total test files | 9 |
+| Node assertions | 2,220 |
+| Browser assertions | 127 |
+| **Total test assertions** | **2,347** |
+| Total test files | 10 |
 | Soak ticks (Node) | 200,000 (2 × 100K) |
 | Soak ticks (Chromium) | 10,000 |
 | Invariant failures | 0 |

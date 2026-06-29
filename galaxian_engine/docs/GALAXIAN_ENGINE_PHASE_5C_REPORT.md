@@ -32,15 +32,42 @@ Phase 5C finalizes the engine with automated browser validation, chromium soak t
 
 - No DOM event listeners accumulate — `InputManager` removes keydown/keyup, `main.js` removes pointer unlock listeners after first interaction.
 
-## Test Results
+## Validation Totals
+
+### Node Suites (standalone, no Playwright)
 
 | Suite | Assertions | Passed |
 |---|---|---|
-| Engine tests | 2,114 | 2,114 |
-| Phase 4 scenarios | 62 | 62 |
-| Phase 5B offline audio | 6 | 6 |
-| Phase 5C scenarios | 37 | 37 |
-| Phase 5C soak (2×100K ticks) | Deterministic | 0 invariant failures |
+| Engine unit tests | 2,114 | 2,114 |
+| Phase 4 integration scenarios | 62 | 62 |
+| Phase 5C combined combat scenarios | 37 | 37 |
+| Phase 5B OfflineAudioContext | 6 | 6 |
+| Node soak determinism | 1 | 1 |
+| **Total Node** | **2,220** | **2,220** |
+
+### Browser Suites (Playwright + Chromium)
+
+| Suite | Assertions | Passed |
+|---|---|---|
+| Phase 4 browser validation | 45 | 45 |
+| Phase 5A browser validation | 8 | 8 |
+| Phase 5B browser validation | 20 | 20 |
+| Phase 5C browser validation | 40 | 40 |
+| Chromium soak | 14 | 14 |
+| **Total browser** | **127** | **127** |
+
+### Grand Total
+
+| Metric | Value |
+|---|---|
+| Total assertions | **2,347** |
+| Node soak ticks | 200,000 (2 × 100K) |
+| Chromium soak ticks | 10,000 |
+| Determinism | Verified (same seed → identical hash) |
+| Invariant failures | 0 |
+| Console errors | 0 |
+| Page errors | 0 |
+| HTTP failures | 0 |
 
 ## Determinism
 
