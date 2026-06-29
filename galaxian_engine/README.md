@@ -114,7 +114,7 @@ Press `F2` (or `D`) to enable. Shows:
 - **Debug overlay** — F2/D toggle, full diagnostics panel
 - **Lifecycle hardening** — Clean state transitions, proper exit() cleanup
 - **Deterministic engine** — Verified 200K+ soak ticks, identical hash across runs
-- **Comprehensive tests** — 2,347 assertions (2,220 Node + 127 browser) across 10 test files
+- **Comprehensive tests** — 2,396 validations (2,220 Node + 176 browser) across 10 test files
 
 ## Controls
 

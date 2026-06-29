@@ -33,6 +33,7 @@ export function initTestAdapter(game, audioManager) {
     for (let i = 0; i < count; i++) {
       game.update();
     }
+    if (game.loop) game.loop._logicTick += count;
   };
 
   api.destroyAlien = (swarmIndex) => {
@@ -115,6 +116,10 @@ export function initTestAdapter(game, audioManager) {
     if (!ps) return;
     ps._ignorePlayerCollisions = invincible;
   };
+
+  api.setLives = (n) => { game.lives = n; };
+
+  api.setScore = (n) => { game.score = n; };
 
   api.forceEnemyFire = () => {
     const ps = game.playState;

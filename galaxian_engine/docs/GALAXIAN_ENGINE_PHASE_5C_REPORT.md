@@ -47,20 +47,22 @@ Phase 5C finalizes the engine with automated browser validation, chromium soak t
 
 ### Browser Suites (Playwright + Chromium)
 
-| Suite | Assertions | Passed |
+| Suite | Checks | Passed |
 |---|---|---|
-| Phase 4 browser validation | 45 | 45 |
-| Phase 5A browser validation | 8 | 8 |
-| Phase 5B browser validation | 20 | 20 |
-| Phase 5C browser validation | 40 | 40 |
-| Chromium soak | 14 | 14 |
-| **Total browser** | **127** | **127** |
+| Phase 4 browser validation | 43 | 43 |
+| Phase 5A browser validation | 5 | 5 |
+| Phase 5B browser validation | 18 | 18 |
+| Phase 5C browser validation | 57 | 57 |
+| Chromium soak | 53 | 53 |
+| **Total browser** | **176** | **176** |
 
 ### Grand Total
 
 | Metric | Value |
 |---|---|
-| Total assertions | **2,347** |
+| Total Node assertions | 2,220 |
+| Total browser checks | 176 |
+| **Grand total** | **2,396** |
 | Node soak ticks | 200,000 (2 × 100K) |
 | Chromium soak ticks | 10,000 |
 | Determinism | Verified (same seed → identical hash) |
