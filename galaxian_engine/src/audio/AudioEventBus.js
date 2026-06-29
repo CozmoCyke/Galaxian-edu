@@ -9,7 +9,10 @@ const EVENTS = {
   GAME_OVER: 'GAME_OVER',
 };
 
-let _events = [];
+const MAX_LOG = 1024;
+let _log = [];
+let _logIdx = 0;
+let _logCount = 0;
 let _subscribers = [];
 
 export { EVENTS };
@@ -17,9 +20,11 @@ export { EVENTS };
 export const AudioEventBus = {
   emit(type, data) {
     const event = { type, data, tick: performance.now() };
-    _events.push(event);
+    _log[_logIdx] = event;
+    _logIdx = (_logIdx + 1) % MAX_LOG;
+    if (_logCount < MAX_LOG) _logCount++;
     for (const fn of _subscribers) {
-      try { fn(event); } catch (e) { /* subscriber error */ }
+      try { fn(event); } catch (e) { }
     }
   },
 
@@ -30,16 +35,32 @@ export const AudioEventBus = {
     };
   },
 
-  get events() { return _events.slice(); },
+  get events() {
+    return AudioEventBus.getEventLog();
+  },
 
-  get count() { return _events.length; },
+  getEventLog() {
+    const result = [];
+    const count = _logCount;
+    if (count === 0) return result;
+    const start = count < MAX_LOG ? 0 : _logIdx;
+    const len = Math.min(count, MAX_LOG);
+    for (let i = 0; i < len; i++) {
+      result.push(_log[(start + i) % MAX_LOG]);
+    }
+    return result;
+  },
+
+  get count() { return _logCount; },
 
   clear() {
-    _events = [];
+    _log = [];
+    _logIdx = 0;
+    _logCount = 0;
   },
 
   reset() {
-    _events = [];
+    AudioEventBus.clear();
     _subscribers = [];
   },
 };

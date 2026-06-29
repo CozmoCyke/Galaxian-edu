@@ -35,6 +35,7 @@ export class Game {
     this.highScore = 0;
     this.lives = 3;
     this.level = 1;
+    this._restartCount = 0;
   }
 
   _registerStates() {
@@ -47,6 +48,9 @@ export class Game {
       if (toName === 'playerDying' && this.sm._current) {
         const prevRender = this.sm._current.render.bind(this.sm._current);
         this._prevStateRender = prevRender;
+      }
+      if (fromName === 'gameOver' && toName === 'playing') {
+        this._restartCount++;
       }
     });
   }

@@ -22,12 +22,13 @@ This document maps each concept from the original Galaxian Z80 disassembly
 
 | ASM Concept | Address/Symbol | JS Equivalent | Status |
 |---|---|---|---|
-| `INFLIGHT_ALIENS` pool | `$42B0–$43AF` (8×32 bytes) | `inflightAliens[]` (planned `InflightAlienPool`) | 🔲 Future |
-| `StageOfLife` (0–13) | field in struct | `InflightAlien.stage` (enum) | 🔲 Future |
-| Slot 0 = flagship | reserved | `InflightAlien.isFlagship` | 🔲 Future |
-| Slots 1–2 = escorts | reserved | `InflightAlien.isEscort` | 🔲 Future |
-| Slots 3–7 = singles | reserved | standard `InflightAlien` | 🔲 Future |
-| `INFLIGHT_ALIEN_ARC_TABLE` | `$1E00` (103 bytes) | `arcTable[]` (∆X, ∆Y pairs) | 🔲 Future |
+| `INFLIGHT_ALIENS` pool | `$42B0–$43AF` (8×32 bytes) | `InflightSlotPool` (8 slots: 0=aux, 1=flagship, 2–3=escort, 4–7=ordinary) | ✅ Implemented |
+| `StageOfLife` (0–13) | field in struct | `InflightController` stage: 0=PACKS_BAGS, 1=FLIES_IN_ARC, 2=READY_TO_ATTACK, 3=ATTACKING_PLAYER, 4=NEAR_BOTTOM, 5=REACHED_BOTTOM, 6=RETURNING, 7=BACK_IN_SWARM | ✅ Implemented |
+| Slot 0 = auxiliary | reserved | `InflightSlotPool` slot 0 (`RESERVED`) | ✅ Implemented |
+| Slot 1 = flagship | reserved | `InflightSlotPool` slot 1 (`SLOT_FLAGSHIP`) | ✅ Implemented |
+| Slots 2–3 = escorts | reserved | `InflightSlotPool` slots 2–3 (`SLOT_ESCORT_START`) | ✅ Implemented |
+| Slots 4–7 = singles | reserved | `InflightSlotPool` slots 4–7 (`SLOT_ORDINARY_START`) | ✅ Implemented |
+| `INFLIGHT_ALIEN_ARC_TABLE` | `$1E00` (103 bytes) | `ORDINARY_ALIEN_ARC_01` generated data (∆X, ∆Y pairs) | ✅ Implemented |
 
 ## Alien Attack System
 
@@ -70,10 +71,10 @@ This document maps each concept from the original Galaxian Z80 disassembly
 
 | ASM Concept | Address/Symbol | JS Equivalent | Status |
 |---|---|---|---|
-| `DIFFICULTY_COUNTER_1` | `$4218` | `difficulty.counter1` | 🔲 Future |
-| `DIFFICULTY_COUNTER_2` | `$4219` | `difficulty.counter2` | 🔲 Future |
-| `DIFFICULTY_EXTRA_VALUE` | `$421A` (0–7) | `difficulty.extraValue` | 🔲 Future |
-| `DIFFICULTY_BASE_VALUE` | `$421B` (0–7) | `difficulty.baseValue` | 🔲 Future |
+| `DIFFICULTY_COUNTER_1` | `$4218` | `OrdinaryAttackScheduler._baseDifficulty` | ✅ Implemented |
+| `DIFFICULTY_COUNTER_2` | `$4219` | `OrdinaryAttackScheduler._extraDifficulty` | ✅ Implemented |
+| `DIFFICULTY_EXTRA_VALUE` | `$421A` (0–7) | `OrdinaryAttackScheduler.extraDifficulty` (0–7) | ✅ Implemented |
+| `DIFFICULTY_BASE_VALUE` | `$421B` (0–7) | `OrdinaryAttackScheduler.baseDifficulty` (0–7) | ✅ Implemented |
 | `PLAYER_LEVEL` | `$421C` (starts at 0) | `Game.level` (starts at 1) | ✅ Partial |
 
 ## Player
@@ -93,12 +94,27 @@ This document maps each concept from the original Galaxian Z80 disassembly
 
 | ASM Concept | Address/Symbol | JS Equivalent | Status |
 |---|---|---|---|
-| `PLAY_PLAYER_SHOOT_SOUND` | `$41CC` | `AudioManager.play('shoot')` | 🔲 Future |
-| `IS_COMPLEX_SOUND_PLAYING` | `$41CD` | `AudioManager.isPlaying` | 🔲 Future |
-| `PLAY_GAME_START_MELODY` | `$41D1` | `AudioManager.playMelody()` | 🔲 Future |
-| `ALIEN_DEATH_SOUND` | `$41DF` | `AudioManager.play('explosion')` | 🔲 Future |
-| `RESET_SWARM_SOUND_TEMPO` | `$41D0` | `AudioManager.resetTempo()` | 🔲 Future |
-| Sound registers | `$6800–$6807` | Web Audio API oscillator nodes | 🔲 Future |
+| `PLAY_PLAYER_SHOOT_SOUND` | `$41CC` | `SoundEffects.playPlayerShot()` fired from `AudioManager._processEvents()` | ✅ Implemented |
+| `IS_COMPLEX_SOUND_PLAYING` | `$41CD` | `MusicSequencePlayer.isPlaying` | ✅ Implicit |
+| `PLAY_GAME_START_MELODY` | `$41D1` | `MusicSequencePlayer.playStageStart()` | ✅ Implemented |
+| `ALIEN_DEATH_SOUND` | `$41DF` | `SoundEffects.playAlienDestroyed()` | ✅ Implemented |
+| `RESET_SWARM_SOUND_TEMPO` | `$41D0` | `FormationHumController.update(aliveCount, totalCount)` pitch/gain modulation | ✅ Implemented |
+| Sound registers | `$6800–$6807` | Web Audio API oscillator nodes (FormationHumController + MusicSequencePlayer) | ✅ Implemented |
+| Formation hum generator | `$1A60` | `FormationHumController` triangle oscillator, freq modulated by aliveCount | ✅ Implemented |
+| Dive sound generator | `$1B0A` | `AttackSoundController.playDiveSound()` sawtooth oscillator | ✅ Implemented |
+| Shooting sound | `$1B8A` | `SoundEffects.playPlayerShot()` / `playEnemyShot()` | ✅ Implemented |
+| Flagship destroyed sound | `$1B28` | `SoundEffects.playFlagshipDestroyed()` | ✅ Implemented |
+| Player destroyed sound | `$1B53` | `SoundEffects.playPlayerDestroyed()` | ✅ Implemented |
+| Audio event system | Event bus `$4000`-area triggers | `AudioEventBus` — event-driven sound dispatch | ✅ Implemented |
+
+## Enemy Bullets
+
+| ASM Concept | Address/Symbol | JS Equivalent | Status |
+|---|---|---|---|
+| Enemy bullet pool | `$4300`-area | `EnemyBulletPool` (14 fixed slots) | ✅ Implemented |
+| Bullet firing logic | `$1B92` | `EnemyBulletController.update()` | ✅ Implemented |
+| Bullet-player collision | `$1BCE` | `PlayState._checkPlayerHit()` | ✅ Implemented |
+| Shock suppression | `$1BFC` | `EnemyBulletController` tests `shockCtrl.isActive` before firing | ✅ Implemented |
 
 ## Scoring
 

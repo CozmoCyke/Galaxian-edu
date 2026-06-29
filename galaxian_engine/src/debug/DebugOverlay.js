@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { AudioEventBus } from '../audio/AudioEventBus.js';
 
 const STAGE_NAMES = [
   'PACKS_BAGS', 'FLIES_IN_ARC', 'READY_TO_ATTACK', 'ATTACKING_PLAYER',
@@ -193,6 +194,52 @@ export class DebugOverlay {
           y += 9;
         }
       }
+    }
+
+    // Audio diagnostics
+    if (this.game.audioManager) {
+      const am = this.game.audioManager;
+      const aeb = AudioEventBus;
+      y += 9;
+      ctx.fillStyle = '#00FFAA';
+      ctx.fillText(
+        `AUDIO: init=${am.initialized}  mute=${am.muted}  lock=${am.audioLocked}  ` +
+        `bus=${aeb.count || aeb._logCount || 0}`,
+        x1, y
+      );
+      y += 9;
+      const hum = am._formationHum;
+      ctx.fillText(
+        `VOICES: hum=${hum ? hum.isRunning : '?'}  ` +
+        `dive=${am._attackSound ? am._attackSound.activeCount : '?'}/${am._attackSound ? am._attackSound._maxActive : '?'}  ` +
+        `music=${am._musicPlayer ? am._musicPlayer.isPlaying : '?'}`,
+        x1, y
+      );
+    }
+
+    // Invariant status (if validator is loaded)
+    if (window.__galaxianInvariantResults) {
+      y += 9;
+      ctx.fillStyle = '#FF88FF';
+      const inv = window.__galaxianInvariantResults;
+      ctx.fillText(
+        `INVARIANTS: ${inv.passed}/${inv.total} passed  errors=${inv.errors.length}`,
+        x1, y
+      );
+    }
+
+    // Player invincibility indicator
+    if (ps && ps._ignorePlayerCollisions) {
+      y += 9;
+      ctx.fillStyle = '#00FFFF';
+      ctx.fillText('INVINCIBLE', x1, y);
+    }
+
+    // Restart count tracking
+    if (this.game._restartCount !== undefined) {
+      y += 9;
+      ctx.fillStyle = '#AAAAAA';
+      ctx.fillText(`RESTARTS: ${this.game._restartCount}`, x1, y);
     }
 
     // Draw alien debug labels on the main game area

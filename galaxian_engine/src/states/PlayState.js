@@ -81,6 +81,14 @@ export class PlayState {
   }
 
   exit() {
+    if (this.scheduler) this.scheduler.setEnabled(false);
+    if (this.flagshipScheduler) {
+      this.flagshipScheduler.setEnabled(false);
+      this.flagshipScheduler.reset();
+    }
+    if (this.inflightCtrl) this.inflightCtrl.reset();
+    if (this.enemyBulletPool) this.enemyBulletPool.reset();
+    if (this.shockCtrl) this.shockCtrl.reset();
     this.game.playState = null;
   }
 

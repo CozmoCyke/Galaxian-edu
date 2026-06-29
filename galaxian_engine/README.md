@@ -66,7 +66,7 @@ Opens `http://127.0.0.1:8080/` in the default browser. Requires Python 3
 
 ## Debug Mode
 
-Press `F2` to enable. Shows:
+Press `F2` (or `D`) to enable. Shows:
 
 - Current game state
 - Logic tick count
@@ -76,6 +76,15 @@ Press `F2` to enable. Shows:
 - Player coordinates and state
 - Bullet active/inactive
 - Score
+- Scheduler state (enabled/disabled, counters, difficulty)
+- Flagship scheduler state (counters, active group, refusal reason)
+- Inflight aliens (slot, stage, trajectory, return target)
+- Shock state (active, counter)
+- Audio diagnostics (initialized, muted, locked, bus count)
+- Attack voice counts (formation hum, dive sounds, music)
+- Invariant status (if validator loaded)
+- Invincibility indicator
+- Restart count
 - Per-alien labels (swarmIndex, type initial)
 
 ## Authentic Mechanics
@@ -91,24 +100,50 @@ Press `F2` to enable. Shows:
 - **Single shot** — Player cannot fire again while a bullet is active
   (matches original hardware).
 
-## Provisional Mechanics
+## Implemented Features
 
-- **Alien point values** — Hardcoded provisional scores (300/200/100/80).
-  Final values depend on attack context (flagship cycling, escort status).
-- **Difficulty** — No difficulty progression; attack scheduling not yet
-  implemented.
-- **Sound** — Not yet implemented (reference MP3s available in `project/snd/`).
-- **Attract mode** — Not yet implemented.
-- **Sprites** — Aliens are rendered with procedural pixel art (`ctx.fillRect`).
-  Sprite-sheet rendering from `project/img/` is planned.
+- **Ordinary attack scheduler** — Counter-based alien launch system (`$424A–$425A`)
+- **Flagship attack scheduler** — ASM-authentic counter cycle, flagship/escort grouping, red fallback
+- **Inflight alien pool** — 8 slots (slot 1 flagship, 2–3 escorts, 4–7 ordinary), 8-stage lifecycle
+- **Arc trajectory tables** — ASM-derived ∆X/∆Y data for dive patterns
+- **Flagship + escort group behavior** — Group lifecycle, return tracking, completion, scoring
+- **Diagonal enemy bullets** — Fired from attacking inflight aliens, suppressed during shock
+- **Sound system** — Web Audio API with formation hum, dive sounds, music sequences, 6 event-triggered SFX
+- **AudioEventBus** — Circular buffer (1024 entries), subscription, event dedup per frame
+- **Engine invariant validator** — Runtime checks for aliens, slots, groups, projectiles, audio, state
+- **Debug overlay** — F2/D toggle, full diagnostics panel
+- **Lifecycle hardening** — Clean state transitions, proper exit() cleanup
+- **Deterministic engine** — Verified 200K+ soak ticks, identical hash across runs
+- **Comprehensive tests** — 2,219+ assertions across 9 test files
 
-## Next Phase
+## Controls
 
-Phase 2 will implement:
+| Key | Action |
+|---|---|
+| `←` / `a` | Move left |
+| `→` / `d` | Move right |
+| `Space` | Fire |
+| `F2` / `D` | Toggle debug overlay |
+| `N` | Restart (on game over screen) |
+| `M` | Toggle mute |
+| `F3` | Launch debug alien (Shift+F3 for clockwise) |
+| `F4` | Toggle ordinary scheduler |
+| `F5` | Increase difficulty (Shift+F5 to reset) |
+| `F6` | Toggle flagship scheduler (Ctrl+F6 for debug launch) |
 
-1. Alien attack scheduling (counter-based system from ASM `$424A–$425A`)
-2. Inflight alien pool (8 slots, stage-of-life state machine)
-3. Arc trajectory tables (`$1E00`)
-4. Flagship + escort group behavior
-5. Diagonal enemy bullets
-6. Sound triggers with reference MP3s
+## Test Suite
+
+```powershell
+node tests\engine_tests.mjs           # 2,114 unit tests
+node tests\scenarios_phase4.mjs       # 62 flagship/group/score tests
+node tests\scenarios_phase5c.mjs      # 37 combined combat scenarios
+node tests\phase5c_soak_test.mjs      # 2×100,000 tick soak (deterministic)
+node tests\phase5b_offline_audio.mjs  # 6 offline audio waveform validations
+```
+
+Browser tests (requires Playwright):
+
+```powershell
+node tests\phase5c_browser_validation.mjs   # 8 scenarios in Chromium
+node tests\phase5c_chromium_soak.mjs        # 10,000 ticks in Chromium
+```
